@@ -425,7 +425,7 @@ public sealed class MainWindow : Window
     private static Control VmDetails(string details)
     {
         var rows = Stack(2);
-        foreach (var line in details.Split('\\n'))
+        foreach (var line in details.Split('\n'))
         {
             var separator = line.IndexOf("   ", StringComparison.Ordinal);
             if (separator < 0) { rows.Children.Add(Txt(line, 13, Muted)); continue; }
