@@ -390,7 +390,14 @@ public sealed class MainWindow : Window
 
         Header("LAB SETUP  /  STEP 1 OF 2");
         var overview = Stack(2);
-        overview.Children.Add(Txt("Linux PrivEsc Techniques", 23, Text, FontWeight.Bold));
+        var overviewHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
+        var tux = Txt("🐧", 36, Text);
+        tux.VerticalAlignment = VerticalAlignment.Center;
+        overviewHeader.Children.Add(tux);
+        var overviewHeading = Txt("Linux PrivEsc Techniques", 23, Text, FontWeight.Bold);
+        overviewHeading.VerticalAlignment = VerticalAlignment.Center;
+        overviewHeader.Children.Add(overviewHeading);
+        overview.Children.Add(overviewHeader);
         overview.Children.Add(Txt("Explore how Linux privilege boundaries fail. Enumerate misconfigurations, gain elevated access in an isolated environment, then investigate detection and remediation.", 14, Muted));
         overview.Children.Add(Txt("Kali Linux attacker + Academy Debian vulnerable target, both on VirtualBox.", 13, Accent));
         var overviewTile = Tile(overview);
@@ -441,6 +448,7 @@ public sealed class MainWindow : Window
         Grid.SetColumn(_distro, 1);
         // Fixed attacker distribution: no selection required.
         attackerBody.Children.Add(attackerHeader);
+        attackerBody.Margin = new Thickness(10, 0, 0, 0);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
         attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Not installed", 14, Muted));
@@ -500,7 +508,7 @@ public sealed class MainWindow : Window
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
             "IP ADDRESS   10.4.4.20 (not configured)\nOS VERSION   Debian 13 (not installed)",
             targetActions);
-        target.Padding = new Thickness(0);
+        target.Padding = new Thickness(10, 0, 0, 0);
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
         Grid.SetColumn(target, 0); targetLayout.Children.Add(target);
         var targetResources = VmResourceControls("target");
