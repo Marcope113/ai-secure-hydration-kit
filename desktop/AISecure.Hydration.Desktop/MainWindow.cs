@@ -873,7 +873,7 @@ public sealed class MainWindow : Window
             // A registered Kali VM is already installed: configure it directly.
             // Do not extract the multi-GB archive again on every click.
             var registeredKali = System.Text.RegularExpressions.Regex.Matches(vmOutput,
-                    @"(?m)^Name:\\s*(kali-linux-[^\\r\\n]+)\\r?$")
+                    @"(?m)^Name:\s*(kali-linux-[^\r\n]+)\r?$")
                 .Cast<System.Text.RegularExpressions.Match>().ToList();
             if (registeredKali.Count == 1)
             {
@@ -893,8 +893,8 @@ public sealed class MainWindow : Window
                 var infoError = await infoErrorTask;
                 if (infoProcess.ExitCode != 0)
                     throw new InvalidOperationException("Cannot inspect Kali VM: " + infoError);
-                if (!infoOutput.Contains("VMState=\\\"poweroff\\\"", StringComparison.OrdinalIgnoreCase) &&
-                    !infoOutput.Contains("VMState=\\\"aborted\\\"", StringComparison.OrdinalIgnoreCase))
+                if (!infoOutput.Contains("VMState=\"poweroff\"", StringComparison.OrdinalIgnoreCase) &&
+                    !infoOutput.Contains("VMState=\"aborted\"", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Existing Kali VM must be powered off before configuration.");
                 _attackerProgress.IsIndeterminate = false;
                 _attackerProgress.Value = 90;
