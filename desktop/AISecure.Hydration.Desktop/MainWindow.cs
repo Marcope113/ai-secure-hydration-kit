@@ -218,11 +218,25 @@ public sealed class MainWindow : Window
         _page.Children.Add(req);
 
         _page.Children.Add(Button("Refresh diagnostics", ShowSetup));
-        _page.Children.Add(Txt("NEXT STEP", 13, Accent, FontWeight.Bold));
-        _next.IsEnabled = false;
-        _page.Children.Add(_next);
         Section("ACTIVITY");
         _page.Children.Add(_activity);
+
+        var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 20, 0, 12) };
+        var nextInfo = Txt("STEP 2 OF 2  /  LEARNING PATH  -  Available after lab validation", 12, Muted);
+        nextInfo.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(nextInfo, 0);
+        footer.Children.Add(nextInfo);
+        _next.Content = "Next  >";
+        _next.IsEnabled = false;
+        _next.MinWidth = 155;
+        _next.HorizontalAlignment = HorizontalAlignment.Right;
+        _next.Background = Paint("#176B80");
+        _next.Foreground = Paint("#F0F5FA");
+        _next.CornerRadius = new CornerRadius(9);
+        _next.FontWeight = FontWeight.SemiBold;
+        Grid.SetColumn(_next, 1);
+        footer.Children.Add(_next);
+        _page.Children.Add(footer);
     }
 
     private Control TargetControls()
