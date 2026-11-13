@@ -595,23 +595,11 @@ public sealed class MainWindow : Window
         deployButton.IsEnabled = hypervisorReady && !_deployingKali;
         _deployKaliButton = deployButton;
         deployArea.Children.Add(deployButton);
-        var lead = new Border { Width = 15, Height = 2, Background = Paint("#4DA5B5"),
-            VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 19, 0, 0) };
-        deployArea.Children.Add(lead);
         var pipeline = new Grid {
             ColumnDefinitions = new ColumnDefinitions("61,18,61,18,61"),
             RowDefinitions = new RowDefinitions("32,Auto"),
             RowSpacing = 3
         };
-        // A single continuous bus behind the milestones, centered on each circle.
-        var bus = new Border {
-            Height = 2, Background = Paint("#4DA5B5"),
-            Margin = new Thickness(0, 0, 30, 0),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Grid.SetRow(bus, 0);
-        Grid.SetColumnSpan(bus, 5);
-        pipeline.Children.Add(bus);
         Border Stage(int column, string label, bool completed, bool available, Action click, string hint)
         {
             var mark = Txt(completed ? "✓" : "", 13, completed ? "#102A25" : Muted, FontWeight.Bold);
@@ -656,11 +644,17 @@ public sealed class MainWindow : Window
             openStage.Background = Paint("#45C8E8");
         }
         deployArea.Children.Add(pipeline);
+        var deployLayout = new Grid();
+        var deployLine = new DeployConnector { StartButton = deployButton, FinalStage = openStage,
+            IsHitTestVisible = false };
+        deployLayout.Children.Add(deployLine);
+        deployLayout.Children.Add(deployArea);
+        deployLayout.LayoutUpdated += (_, _) => deployLine.InvalidateVisual();
         // These legacy controls are not used by the new milestone visualization.
         _kaliDownloadButton = null;
         _extractedKaliButton = null;
         _installAttackerButton = null;
-        attackerControls.Children.Add(deployArea);
+        attackerControls.Children.Add(deployLayout);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
@@ -1937,18 +1931,11 @@ public sealed class MainWindow : Window
         deploy.IsEnabled = hypervisorReady && !_deployingDebian;
         _deployDebianButton = deploy;
         actions.Children.Add(deploy);
-        actions.Children.Add(new Border {
-            Width = 9, Height = 2, Background = Paint("#4DA5B5"),
-            VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 19, 0, 0)
-        });
         var pipeline = new Grid {
             ColumnDefinitions = new ColumnDefinitions("53,12,53,12,65"),
             RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
         };
-        var bus = new Border { Height = 2, Background = Paint("#4DA5B5"),
-            Margin = new Thickness(0, 0, 30, 0), VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumnSpan(bus, 5);
-        pipeline.Children.Add(bus);
+        Border? lastStage = null;
         void Stage(int col, string name, bool completed, bool enabled, Action click, string hint)
         {
             var mark = Txt(completed ? "✓" : "", 13, "#102A25", FontWeight.Bold);
@@ -1969,6 +1956,7 @@ public sealed class MainWindow : Window
             ToolTip.SetTip(circle, hint);
             Grid.SetColumn(circle, col);
             pipeline.Children.Add(circle);
+            if (col == 4) lastStage = circle;
             var caption = Txt(name, 9, completed ? Green : Muted, FontWeight.SemiBold);
             caption.TextAlignment = TextAlignment.Center;
             Grid.SetColumn(caption, col);
@@ -1981,8 +1969,14 @@ public sealed class MainWindow : Window
         Stage(2, "Install", false, false, () => {}, "Automated Debian installation not yet implemented");
         Stage(4, "Open Debian", false, false, () => {}, "Available after Debian installation");
         actions.Children.Add(pipeline);
+        var layout = new Grid();
+        var connector = new DeployConnector { StartButton = deploy, FinalStage = lastStage,
+            IsHitTestVisible = false };
+        layout.Children.Add(connector);
+        layout.Children.Add(actions);
+        layout.LayoutUpdated += (_, _) => connector.InvalidateVisual();
         _debianDownloadButton = null;
-        return actions;
+        return layout;
     }
 
     private async Task DeployDebianAsync()
