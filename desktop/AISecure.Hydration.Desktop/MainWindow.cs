@@ -635,7 +635,8 @@ public sealed class MainWindow : Window
         var attackerResources = VmResourceControls("attacker");
         attackerResources.Margin = new Thickness(0);
         Grid.SetColumn(attackerResources, 1); attackerLayout.Children.Add(attackerResources);
-        var attackerCard = Stack(1);
+        var attackerCard = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 8 };
+        Grid.SetRow(attackerLayout, 0);
         attackerCard.Children.Add(attackerLayout);
         var attackerProgressArea = Stack(2);
         attackerProgressArea.Margin = new Thickness(0);
@@ -658,6 +659,7 @@ public sealed class MainWindow : Window
         attackerProgressArea.Children.Add(attackerProgressHeader);
 
         attackerProgressArea.Children.Add(_attackerProgress);
+        Grid.SetRow(attackerProgressArea, 1);
         attackerCard.Children.Add(attackerProgressArea);
         var attacker = Tile(attackerCard); attacker.Padding = new Thickness(7);
         attacker.BorderBrush = Paint(_kaliRunning ? Green : Yellow);
@@ -732,7 +734,8 @@ public sealed class MainWindow : Window
         var targetResources = VmResourceControls("target");
         targetResources.Margin = new Thickness(0);
         Grid.SetColumn(targetResources, 1); targetLayout.Children.Add(targetResources);
-        var targetCard = Stack(1);
+        var targetCard = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 8 };
+        Grid.SetRow(targetLayout, 0);
         targetCard.Children.Add(targetLayout);
         var targetProgressArea = Stack(2);
         targetProgressArea.Margin = new Thickness(0);
@@ -755,6 +758,7 @@ public sealed class MainWindow : Window
         targetProgressArea.Children.Add(targetProgressHeader);
 
         targetProgressArea.Children.Add(_targetProgress);
+        Grid.SetRow(targetProgressArea, 1);
         targetCard.Children.Add(targetProgressArea);
         var targetTile = Tile(targetCard); targetTile.Padding = new Thickness(7);
         targetTile.BorderBrush = Paint(Yellow); // Target remains offline until actual guest checks.
