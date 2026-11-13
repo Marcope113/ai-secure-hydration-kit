@@ -471,7 +471,14 @@ public sealed class MainWindow : Window
             Content = "Configure",
             IsEnabled = false,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Padding = new Thickness(10, 8)
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            Padding = new Thickness(14, 8),
+            CornerRadius = new CornerRadius(9),
+            Background = Paint("#142B42"),
+            Foreground = Paint(Muted),
+            BorderBrush = Paint(Accent),
+            BorderThickness = new Thickness(1.5),
+            FontWeight = FontWeight.SemiBold
         });
         var linkTile = new Border {
             Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
