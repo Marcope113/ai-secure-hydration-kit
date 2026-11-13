@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Avalonia;
@@ -9,216 +10,224 @@ namespace AISecure.Hydration.Desktop;
 
 public sealed class MainWindow : Window
 {
-    private readonly StackPanel _main = new() { Spacing = 18, Margin = new Thickness(28) };
-    private readonly Button _next = new() { Content = "Next: Learning Path  >", IsEnabled = false, Padding = new Thickness(18, 10) };
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _host = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _target = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _targetIp = new() { Text = "IP: Not assigned", Foreground = new SolidColorBrush(Color.Parse("#A7B8CB")) };
-    private readonly TextBlock _attackerIp = new() { Text = "IP: Not assigned", Foreground = new SolidColorBrush(Color.Parse("#A7B8CB")) };
-    private readonly TextBlock _attacker = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly ComboBox _choice = new()
-    {
-        ItemsSource = new[] { "Kali Linux", "Parrot Security OS" },
-        SelectedIndex = 0,
-        MinWidth = 240
-    };
-    private readonly string _stateRoot = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AISecureAcademy");
+    private const string Accent = "#53DCE8", Purple = "#C5A4FF", Text = "#F0F5FA", Muted = "#A3B5C7";
+    private const string Green = "#67D7A2", Yellow = "#F0BF67", Red = "#FF7F8D";
+    private readonly string _root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AISecureAcademy");
+    private readonly StackPanel _page = new() { Spacing = 18, Margin = new Thickness(30, 26) };
+    private readonly ComboBox _distro = new() { ItemsSource = new[] { "Kali Linux", "Parrot Security OS" }, SelectedIndex = 0, MinWidth = 210 };
+    private readonly TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
+    private readonly Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
+    private bool _showingLessons;
+    private string _selected = "kali";
 
     public MainWindow()
     {
         Title = "AI Secure Academy | Hydration Kit";
-        Width = 1120;
-        Height = 800;
-        MinWidth = 680;
-        MinHeight = 560;
-        Background = new SolidColorBrush(Color.Parse("#0B1520"));
-
-        var main = _main;
-        main.Children.Add(Label("// AI SECURE  A C A D E M Y", 21, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(Label("LEARN  /  PRACTICE  /  VALIDATE", 12, "#A7B8CB"));
-        main.Children.Add(Label("HYDRATION KIT: Linux PrivEsc Techniques", 24, "#F1F5F9", FontWeight.SemiBold));
-        main.Children.Add(Label("Windows desktop preview  |  " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), 13, "#9FB0BF"));
-        main.Children.Add(new Border { Height = 1, Background = new SolidColorBrush(Color.Parse("#304557")) });
-        main.Children.Add(Label("VIRTUAL LAB TOPOLOGY", 18, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(Label("Two isolated machines connected through the aisecurelab internal network.", 13, "#A7B8CB"));
-
-        var topology = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*"), ColumnSpacing = 14 };
-        var attackerCard = new StackPanel { Spacing = 10 };
-        attackerCard.Children.Add(Label("ATTACKER", 13, "#55DCE8", FontWeight.Bold));
-        attackerCard.Children.Add(Label("Kali Linux / Parrot OS", 20, "#F1F5F9", FontWeight.SemiBold));
-        attackerCard.Children.Add(_attacker);
-        attackerCard.Children.Add(_attackerIp);
-        attackerCard.Children.Add(Label("OS version: Not detected", 13, "#A7B8CB"));
-        attackerCard.Children.Add(_choice);
-        attackerCard.Children.Add(InstallAction("Install Attacker", "Attacker installation is not enabled yet."));
-        var attackerPanel = new Border { Background = new SolidColorBrush(Color.Parse("#172737")), CornerRadius = new CornerRadius(12), Padding = new Thickness(20), Child = attackerCard };
-        Grid.SetColumn(attackerPanel, 0);
-        topology.Children.Add(attackerPanel);
-
-        var link = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        link.Children.Add(Label("<---->", 18, "#55DCE8", FontWeight.Bold));
-        link.Children.Add(Label("ISOLATED", 11, "#A7B8CB"));
-        Grid.SetColumn(link, 1);
-        topology.Children.Add(link);
-
-        var targetCard = new StackPanel { Spacing = 10 };
-        targetCard.Children.Add(Label("VICTIM / TARGET", 13, "#C7AAFF", FontWeight.Bold));
-        targetCard.Children.Add(Label("Debian 13", 20, "#F1F5F9", FontWeight.SemiBold));
-        targetCard.Children.Add(_target);
-        targetCard.Children.Add(_targetIp);
-        targetCard.Children.Add(Label("ISO: Debian 13.7.0 (guest not verified)", 13, "#A7B8CB"));
-        targetCard.Children.Add(InstallAction("Install Target", "Target installation is not enabled yet."));
-        var targetPanel = new Border { Background = new SolidColorBrush(Color.Parse("#172737")), CornerRadius = new CornerRadius(12), Padding = new Thickness(20), Child = targetCard };
-        Grid.SetColumn(targetPanel, 2);
-        topology.Children.Add(targetPanel);
-        main.Children.Add(topology);
-        main.Children.Add(Label("NETWORK  /  VirtualBox internal: aisecurelab  |  No external access after provisioning", 12, "#A7B8CB"));
-
-        main.Children.Add(Label("HOST REQUIREMENTS", 15, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(_host);
-        main.Children.Add(RequirementCard("Windows and architecture", "Detects supported Windows host and CPU architecture.", "Windows 11 x64 is supported.", false));
-        main.Children.Add(RequirementCard("VirtualBox hypervisor", "Checks the installed VirtualBox executable.", "If missing: install VirtualBox from https://www.virtualbox.org/wiki/Downloads, then restart this app. For automated Windows installation: winget install --id Oracle.VirtualBox --exact", true));
-        main.Children.Add(RequirementCard("Disk space and memory", "Checks disk capacity; memory verification is planned.", "Recommended: at least 8 GB RAM and 35 GB free disk for the initial VM. Two VMs may require more.", false));
-
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-        var refresh = new Button { Content = "Refresh diagnostics", Padding = new Thickness(16, 10) };
-        refresh.Click += (_, _) => Refresh();
-        var save = new Button { Content = "Save attacker selection", Padding = new Thickness(16, 10) };
-        save.Click += (_, _) => SaveSelection();
-        buttons.Children.Add(refresh);
-        buttons.Children.Add(save);
-        main.Children.Add(buttons);
-        main.Children.Add(Label("STEP 1 OF 2  /  PREPARE YOUR LAB", 15, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(Label("Learning Path unlocks after the target and attacker VMs have been verified.", 13, "#A7B8CB"));
-        _next.Click += (_, _) => ShowLearningPath();
-        main.Children.Add(_next);
-        main.Children.Add(Label("ACTIVITY", 15, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(_status);
-        main.Children.Add(Label("Preview: installation controls are disabled until verified. Manual instructions are available for requirements.", 12, "#E8B65B"));
-        Content = new ScrollViewer { Content = main };
-        Refresh();
-        UpdateNextState();
+        Width = 1160; Height = 840; MinWidth = 800; MinHeight = 580;
+        Background = Paint("#0B1520");
+        Content = new ScrollViewer { Content = _page };
+        _next.Click += (_, _) => ShowLessons();
+        ShowSetup();
     }
 
-    private void UpdateNextState()
+    private static IBrush Paint(string hex) => new SolidColorBrush(Color.Parse(hex));
+    private static TextBlock Txt(string value, double size = 14, string color = Text, FontWeight weight = FontWeight.Normal) =>
+        new() { Text = value, FontSize = size, Foreground = Paint(color), FontWeight = weight, TextWrapping = TextWrapping.Wrap };
+    private static Border Tile(Control child, string background = "#172737") =>
+        new() { Background = Paint(background), CornerRadius = new CornerRadius(12), Padding = new Thickness(19), Child = child };
+    private static StackPanel Stack(int gap = 9) => new() { Spacing = gap };
+    private static Button Button(string title, Action click)
     {
-        // Do not infer readiness from manifest presence. A future health check must
-        // verify guest installation, both VM states, and isolated networking.
-        _next.IsEnabled = false;
-        _next.Content = "Next: Learning Path  (Lab verification pending)";
+        var b = new Button { Content = title, Padding = new Thickness(14, 9), HorizontalAlignment = HorizontalAlignment.Left };
+        b.Click += (_, _) => click();
+        return b;
     }
+    private static string State(bool ok) => ok ? "SUPPORTED" : "NOT SUPPORTED";
+    private string Existing(string name) => File.Exists(Path.Combine(_root, name)) ? "Found" : "Not found";
 
-    private void ShowLearningPath()
+    private void Header(string section)
     {
-        if (!_next.IsEnabled) return;
-        _main.Children.Clear();
-        _main.Children.Add(Label("// AI SECURE  A C A D E M Y", 21, "#55DCE8", FontWeight.Bold));
-        _main.Children.Add(Label("STEP 2 OF 2  /  LEARNING PATH", 15, "#55DCE8", FontWeight.Bold));
-        _main.Children.Add(Label("Linux PrivEsc Techniques", 24, "#F1F5F9", FontWeight.SemiBold));
-        _main.Children.Add(Label("01  Linux Fundamentals", 16, "#F2F6FC"));
-        _main.Children.Add(Label("02  Sudo Misconfigurations", 16, "#F2F6FC"));
-        _main.Children.Add(Label("03  SUID Exploitation", 16, "#F2F6FC"));
-        _main.Children.Add(Label("04  Cron Jobs", 16, "#F2F6FC"));
-        _main.Children.Add(Label("05  Linux Capabilities", 16, "#F2F6FC"));
-        _main.Children.Add(Label("Lesson content and completion checks are not yet implemented.", 12, "#E8B65B"));
-        var back = new Button { Content = "< Back to Lab Setup", Padding = new Thickness(18, 10) };
-        back.Click += (_, _) => ShowSetup();
-        _main.Children.Add(back);
+        _page.Children.Clear();
+        _page.Children.Add(Txt("// AI SECURE  A C A D E M Y", 21, Accent, FontWeight.Bold));
+        _page.Children.Add(Txt(section, 12, Muted, FontWeight.SemiBold));
+    }
+    private void Section(string title) => _page.Children.Add(Txt(title, 16, Accent, FontWeight.Bold));
+
+    private Border Machine(string symbol, string role, string name, string state, string color, string details, Control? action = null)
+    {
+        var body = Stack(9);
+        body.Children.Add(Txt(symbol + "   " + role, 15, color, FontWeight.Bold));
+        body.Children.Add(Txt(name, 22, Text, FontWeight.SemiBold));
+        body.Children.Add(Txt(state, 13, color, FontWeight.Bold));
+        body.Children.Add(Txt(details, 13, Muted));
+        if (action is not null) body.Children.Add(action);
+        return Tile(body);
     }
 
     private void ShowSetup()
     {
-        // Reconstruct the setup view only after navigation is enabled in a future release.
-        _status.Text = "Return to Lab Setup will be enabled with the validated navigation flow.";
-    }
+        _showingLessons = false;
+        Header("LAB SETUP  /  STEP 1 OF 2");
+        var overview = Stack(8);
+        overview.Children.Add(Txt("Linux PrivEsc Techniques", 28, Text, FontWeight.Bold));
+        overview.Children.Add(Txt("Explore how Linux privilege boundaries fail. Enumerate misconfigurations, gain elevated access in an isolated environment, then investigate detection and remediation.", 14, Muted));
+        overview.Children.Add(Txt("One target Debian VM + your choice of Kali Linux or Parrot Security OS.", 13, Accent));
+        _page.Children.Add(Tile(overview));
 
-    private static TextBlock Label(string value, double size, string color, FontWeight weight = FontWeight.Normal) =>
-        new() { Text = value, FontSize = size, Foreground = new SolidColorBrush(Color.Parse(color)), FontWeight = weight, TextWrapping = TextWrapping.Wrap };
+        Section("VIRTUAL LAB TOPOLOGY");
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,110,*"), ColumnSpacing = 12 };
+        var attackerControls = Stack(8);
+        attackerControls.Children.Add(_distro);
+        attackerControls.Children.Add(Button("Save selection", SaveSelection));
+        var attacker = Machine("[>_]", "ATTACKER", _selected == "parrot" ? "Parrot Security OS" : "Kali Linux",
+            "NOT INSTALLED", Yellow, "IP ADDRESS   Not assigned\nOS VERSION   Not detected", attackerControls);
+        Grid.SetColumn(attacker, 0); network.Children.Add(attacker);
+        var link = Stack(5);
+        link.VerticalAlignment = VerticalAlignment.Center;
+        link.HorizontalAlignment = HorizontalAlignment.Center;
+        link.Children.Add(Txt("<------>", 20, Accent, FontWeight.Bold));
+        link.Children.Add(Txt("INTERNAL", 11, Muted));
+        link.Children.Add(Txt("aisecurelab", 11, Muted));
+        Grid.SetColumn(link, 1); network.Children.Add(link);
+        var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
+            Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
+            "IP ADDRESS   Not assigned\nOS VERSION   Not verified\nMEDIA   Debian 13.7.0 ISO");
+        Grid.SetColumn(target, 2); network.Children.Add(target);
+        _page.Children.Add(network);
+        _page.Children.Add(Txt("The topology shows planned isolated connectivity. IP addresses and guest versions will be displayed only after verification.", 12, Muted));
 
-    private Border RequirementCard(string name, string description, string manual, bool installable)
-    {
-        var inner = new StackPanel { Spacing = 8 };
-        inner.Children.Add(Label(name, 16, "#F2F6FC", FontWeight.SemiBold));
-        inner.Children.Add(Label(description, 13, "#A7B8CB"));
-        var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        controls.Children.Add(new Button { Content = "Install (not available)", IsEnabled = false });
-        var help = new Button { Content = "Manual instructions" };
-        help.Click += (_, _) => _status.Text = name + ": " + manual;
-        controls.Children.Add(help);
-        inner.Children.Add(controls);
-        return new Border { Background = new SolidColorBrush(Color.Parse("#172737")), CornerRadius = new CornerRadius(10), Padding = new Thickness(16), Child = inner };
-    }
-
-    private Button InstallAction(string label, string message)
-    {
-        var button = new Button { Content = label + " (not available)", IsEnabled = false, HorizontalAlignment = HorizontalAlignment.Left };
-        return button;
-    }
-
-    private void Refresh()
-    {
-        try
+        Section("TECHNIQUES COVERED");
+        var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
+        var items = new (string,string)[] {
+            ("01  Linux Enumeration", "Users, processes and permissions"),
+            ("02  Sudo Misconfigurations", "Unsafe delegated privileges"),
+            ("03  SUID Binaries", "Privileged executable paths"),
+            ("04  Cron Jobs", "Scheduled task weaknesses"),
+            ("05  Linux Capabilities", "Granular privilege misuse"),
+            ("06  PATH & Permissions", "Environment and file trust")
+        };
+        for (var i = 0; i < items.Length; i++)
         {
-            var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
-            var freeGb = drive.AvailableFreeSpace / 1024d / 1024 / 1024;
-            var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "Oracle", "VirtualBox", "VBoxManage.exe");
-            var osName = OperatingSystem.IsWindows() && Environment.OSVersion.Version.Build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription;
-            _host.Text = $"OS: {osName}\nArchitecture: {RuntimeInformation.OSArchitecture}\nAvailable disk: {freeGb:F1} GB\nVirtualBox: {(File.Exists(vbox) ? "Detected" : "Not detected")}\nMemory: Not checked in this preview";
-            _target.Text = $"VM manifest: {Exists("hydration-v02.json")}\nDebian media manifest: {Exists("debian-media.json")}\nGuest installation: Not verified";
-            var selected = ReadSelection();
-            _attacker.Text = selected is null ? "Not selected / not installed" : $"Saved selection: {selected} (installation pending)";
-            _choice.SelectedIndex = selected == "parrot" ? 1 : 0;
-            _status.Text = "Diagnostics refreshed. No changes made.";
+            var body = Stack(6);
+            body.Children.Add(Txt(items[i].Item1, 14, Text, FontWeight.SemiBold));
+            body.Children.Add(Txt(items[i].Item2, 12, Muted));
+            var tile = Tile(body);
+            Grid.SetColumn(tile, i % 3); Grid.SetRow(tile, i / 3); techniques.Children.Add(tile);
         }
-        catch (Exception ex) { _status.Text = "Diagnostic error: " + ex.Message; }
+        _page.Children.Add(techniques);
+
+        Section("HOST REQUIREMENTS");
+        var req = Stack(12);
+        var build = Environment.OSVersion.Version.Build;
+        var windows = OperatingSystem.IsWindows();
+        var architecture = RuntimeInformation.OSArchitecture;
+        var archOk = windows && architecture == Architecture.X64 && build >= 22000;
+        var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
+        var free = drive.AvailableFreeSpace / 1073741824d;
+        var diskOk = free >= 35;
+        var memoryGb = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1073741824d;
+        // TotalAvailableMemoryBytes is a process limit, not physical RAM. Do not report it as host memory.
+        var vboxPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Oracle", "VirtualBox", "VBoxManage.exe");
+        var vboxOk = File.Exists(vboxPath);
+
+        var summary = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 12 };
+        var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
+            "Windows 11 x64 is required for this Windows preview.", null);
+        var diskTile = Requirement("DISK SPACE", $"{free:F1} GB free", diskOk ? "SUPPORTED" : "NOT ENOUGH SPACE", diskOk ? Green : Red,
+            "Minimum 35 GB free for the initial target VM. More space is recommended for two VMs.", null);
+        var vboxTile = Requirement("VIRTUALBOX", vboxOk ? "Detected" : "Missing", vboxOk ? "SUPPORTED" : "INSTALL REQUIRED", vboxOk ? Green : Red,
+            "Manual installation: https://www.virtualbox.org/wiki/Downloads", vboxOk ? null : "Install VirtualBox");
+        Grid.SetColumn(architectureTile, 0); summary.Children.Add(architectureTile);
+        Grid.SetColumn(diskTile, 1); summary.Children.Add(diskTile);
+        Grid.SetColumn(vboxTile, 2); summary.Children.Add(vboxTile);
+        req.Children.Add(summary);
+        req.Children.Add(Txt("Host: " + (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription) +
+            "  |  Physical RAM: verification pending  |  Virtualization: verification pending", 12, Muted));
+        _page.Children.Add(req);
+
+        Section("LAB INSTALLATION");
+        var setup = Stack(8);
+        setup.Children.Add(Txt("Target: Debian media prepared, guest installation not verified. Attacker: distribution selection only.", 13, Muted));
+        setup.Children.Add(Txt("Installation controls will be enabled after provisioning operations and rollback behavior pass integration tests.", 12, Yellow));
+        _page.Children.Add(Tile(setup));
+        _page.Children.Add(Button("Refresh diagnostics", ShowSetup));
+        _page.Children.Add(Txt("NEXT STEP", 13, Accent, FontWeight.Bold));
+        _next.IsEnabled = false;
+        _page.Children.Add(_next);
+        Section("ACTIVITY");
+        _page.Children.Add(_activity);
     }
 
-    private string Exists(string name) => File.Exists(Path.Combine(_stateRoot, name)) ? "Found" : "Not found";
+    private Border Requirement(string title, string detail, string status, string statusColor, string manual, string? installLabel)
+    {
+        var body = Stack(8);
+        body.Children.Add(Txt(title, 12, Muted, FontWeight.Bold));
+        body.Children.Add(Txt(detail, 18, Text, FontWeight.SemiBold));
+        body.Children.Add(Txt(status, 13, statusColor, FontWeight.Bold));
+        if (installLabel is not null)
+        {
+            // No provisioning operation is wired yet: never show a misleading active install button.
+            body.Children.Add(Txt("Automatic install: coming after validation", 11, Yellow));
+            body.Children.Add(Button("Manual instructions", () => ShowInstructions(title, manual)));
+        }
+        return Tile(body);
+    }
+
+    private void ShowInstructions(string title, string instructions)
+    {
+        _activity.Text = title + ": " + instructions;
+        var dialog = new Window
+        {
+            Title = "Manual instructions - " + title, Width = 540, Height = 220,
+            Background = Paint("#152332"),
+            Content = new TextBlock { Text = instructions, Foreground = Paint(Text), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(24) }
+        };
+        dialog.Show(this);
+    }
 
     private string? ReadSelection()
     {
-        var file = Path.Combine(_stateRoot, "attacker-selection.json");
+        var file = Path.Combine(_root, "attacker-selection.json");
         if (!File.Exists(file)) return null;
-        using var document = JsonDocument.Parse(File.ReadAllText(file));
-        return document.RootElement.TryGetProperty("distribution", out var value) ? value.GetString() : null;
+        using var doc = JsonDocument.Parse(File.ReadAllText(file));
+        return doc.RootElement.TryGetProperty("distribution", out var val) ? val.GetString() : null;
     }
 
     private void SaveSelection()
     {
         try
         {
-            var distribution = _choice.SelectedIndex == 1 ? "parrot" : "kali";
-            Directory.CreateDirectory(_stateRoot);
-            var destination = Path.Combine(_stateRoot, "attacker-selection.json");
-            if (File.Exists(destination))
+            var selection = _distro.SelectedIndex == 1 ? "parrot" : "kali";
+            Directory.CreateDirectory(_root);
+            var file = Path.Combine(_root, "attacker-selection.json");
+            if (File.Exists(file))
             {
-                using var document = JsonDocument.Parse(File.ReadAllText(destination));
-                if (document.RootElement.TryGetProperty("stage", out var stage) &&
-                    stage.GetString() != "selected-not-downloaded")
+                using var doc = JsonDocument.Parse(File.ReadAllText(file));
+                if (doc.RootElement.TryGetProperty("stage", out var stage) && stage.GetString() != "selected-not-downloaded")
                 {
-                    _status.Text = "Selection is already provisioned or in progress. Refusing to overwrite its manifest.";
-                    return;
+                    _activity.Text = "Existing installation state cannot be overwritten."; return;
                 }
             }
-            var state = new
-            {
-                schemaVersion = 1,
-                labId = "linux-privesc",
-                role = "attacker",
-                distribution,
-                stage = "selected-not-downloaded",
-                network = "aisecurelab",
-                selectedAt = DateTimeOffset.Now.ToString("o")
-            };
-            var temp = destination + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
-            File.Move(temp, destination, true);
-            _status.Text = $"Saved {distribution} preference. No ISO downloaded or VM changed.";
-            Refresh();
+            var state = new { schemaVersion = 1, labId = "linux-privesc", role = "attacker",
+                distribution = selection, stage = "selected-not-downloaded", network = "aisecurelab",
+                selectedAt = DateTimeOffset.Now.ToString("o") };
+            var tmp = file + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(tmp, file, true);
+            _selected = selection;
+            _activity.Text = "Attacker selection saved. No VM changes made.";
+            ShowSetup();
         }
-        catch (Exception ex) { _status.Text = "Could not save selection: " + ex.Message; }
+        catch (Exception ex) { _activity.Text = "Selection error: " + ex.Message; }
+    }
+
+    private void ShowLessons()
+    {
+        if (!_next.IsEnabled) return;
+        _showingLessons = true;
+        Header("LEARNING PATH  /  STEP 2 OF 2");
+        _page.Children.Add(Txt("Linux PrivEsc Techniques", 28, Text, FontWeight.Bold));
+        _page.Children.Add(Txt("Lessons will be unlocked after both virtual machines and their isolated network pass validation.", 14, Muted));
+        _page.Children.Add(Button("Back to Lab Setup", ShowSetup));
     }
 }
