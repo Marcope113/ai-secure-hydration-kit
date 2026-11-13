@@ -683,7 +683,7 @@ public sealed class MainWindow : Window
         link.Children.Add(configureNetwork);
         var linkTile = new Border {
             Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
-            BorderBrush = Paint("#355368"), BorderThickness = new Thickness(1),
+            BorderBrush = Paint(Yellow), BorderThickness = new Thickness(2),
             Padding = new Thickness(9, 9), VerticalAlignment = VerticalAlignment.Center,
             Child = link
         };
@@ -731,7 +731,8 @@ public sealed class MainWindow : Window
         targetProgressArea.Children.Add(_targetProgress);
         targetCard.Children.Add(targetProgressArea);
         var targetTile = Tile(targetCard); targetTile.Padding = new Thickness(7);
-        SetReadyOutline(targetTile, false); // ISO attachment is not VM validation.
+        targetTile.BorderBrush = Paint(Yellow); // Target remains offline until actual guest checks.
+        targetTile.BorderThickness = new Thickness(2);
         var targetLayer = WithLayer(targetTile, "LAYER 03", "Virtual Machines  /  Victim");
         Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
