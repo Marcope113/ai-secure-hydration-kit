@@ -283,23 +283,24 @@ public sealed class MainWindow : Window
         var topology = Stack(12);
         topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
         var layers = Stack(12);
-        TextBlock LayerWatermark(string label)
-        {
-            return new TextBlock {
-                Text = label, FontSize = 13, FontWeight = FontWeight.Bold,
-                Foreground = Paint("#7D9AB0"), Opacity = 0.48,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment = VerticalAlignment.Top,
-                IsHitTestVisible = false
-            };
-        }
-        Control WithLayer(Control content, string layer)
+        Control WithLayer(Control content, string layer, string description)
         {
             var frame = new Grid();
             frame.Children.Add(content);
-            var watermark = LayerWatermark(layer);
-            watermark.Margin = new Thickness(0, 3, 6, 0);
-            frame.Children.Add(watermark);
+            var labels = Stack(3);
+            labels.HorizontalAlignment = HorizontalAlignment.Right;
+            labels.VerticalAlignment = VerticalAlignment.Top;
+            labels.Margin = new Thickness(0, 5, 9, 0);
+            labels.IsHitTestVisible = false;
+            foreach (var line in new[] { layer, description })
+            {
+                var text = Txt(line, line == layer ? 11 : 10, Muted,
+                    line == layer ? FontWeight.Bold : FontWeight.Normal);
+                text.TextAlignment = TextAlignment.Right;
+                text.Opacity = line == layer ? 0.65 : 0.55;
+                labels.Children.Add(text);
+            }
+            frame.Children.Add(labels);
             return frame;
         }
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
@@ -326,7 +327,8 @@ public sealed class MainWindow : Window
         var attackerResources = VmResourceControls("attacker");
         Grid.SetColumn(attackerResources, 1); attackerLayout.Children.Add(attackerResources);
         var attacker = Tile(attackerLayout);
-        Grid.SetColumn(attacker, 0); network.Children.Add(WithLayer(attacker, "LAYER 03"));
+        var attackerLayer = WithLayer(attacker, "LAYER 03", "Virtual Machines  /  Attacker");
+        Grid.SetColumn(attackerLayer, 0); network.Children.Add(attackerLayer);
         var link = Stack(8);
         link.VerticalAlignment = VerticalAlignment.Center;
         link.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -362,7 +364,8 @@ public sealed class MainWindow : Window
         var targetResources = VmResourceControls("target");
         Grid.SetColumn(targetResources, 1); targetLayout.Children.Add(targetResources);
         var targetTile = Tile(targetLayout);
-        Grid.SetColumn(targetTile, 2); network.Children.Add(WithLayer(targetTile, "LAYER 03"));
+        var targetLayer = WithLayer(targetTile, "LAYER 03", "Virtual Machines  /  Victim");
+        Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
 
         // The hypervisor is the foundation beneath both guest machines.
@@ -394,7 +397,7 @@ public sealed class MainWindow : Window
             installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(installHypervisor);
         }
-        layers.Children.Add(WithLayer(Tile(foundationInfo, "#20384A"), "LAYER 02"));
+        layers.Children.Add(WithLayer(Tile(foundationInfo, "#20384A"), "LAYER 02", "Hypervisor  /  Virtualization platform"));
         // Physical host is the bottom layer of the topology, beneath VirtualBox.
         // Host hardware and OS are the physical foundation of the VM stack.
         var build = Environment.OSVersion.Version.Build;
@@ -430,7 +433,7 @@ public sealed class MainWindow : Window
         pendingHostChecks.TextAlignment = TextAlignment.Center;
         pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(pendingHostChecks);
-        layers.Children.Add(WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01"));
+        layers.Children.Add(WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system"));
         topology.Children.Add(layers);
         var flowNote = Txt("SETUP FLOW   Host  →  Hypervisor  →  Virtual Machines  →  Network validation", 12, Accent);
         flowNote.TextAlignment = TextAlignment.Center;
