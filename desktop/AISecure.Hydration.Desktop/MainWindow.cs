@@ -752,8 +752,12 @@ public sealed class MainWindow : Window
             _dhcpConfigured ? Green : Yellow, FontWeight.Bold);
         _dhcpStateLabel.TextAlignment = TextAlignment.Center;
         dhcpPanel.Children.Add(_dhcpStateLabel);
-        dhcpPanel.Children.Add(Txt("10.4.4.100–200  /  255.255.255.0", 10, Muted));
-        dhcpPanel.Children.Add(Txt("Automatic on VM start", 10, Muted));
+        var dhcpRange = Txt("IP RANGE   10.4.4.100 – 10.4.4.200/24", 13, Muted);
+        dhcpRange.TextAlignment = TextAlignment.Center;
+        dhcpPanel.Children.Add(dhcpRange);
+        var dhcpAuto = Txt("Automatic on VM start", 13, Muted);
+        dhcpAuto.TextAlignment = TextAlignment.Center;
+        dhcpPanel.Children.Add(dhcpAuto);
         var dhcpTile = Tile(dhcpPanel, "#20384A");
         dhcpTile.Padding = new Thickness(10, 9);
         dhcpTile.BorderBrush = Paint(_dhcpConfigured ? Green : Yellow);
