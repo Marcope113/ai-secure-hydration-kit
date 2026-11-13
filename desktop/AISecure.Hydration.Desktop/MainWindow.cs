@@ -29,6 +29,7 @@ public sealed class MainWindow : Window
     private Button? _kaliDownloadButton;
     private Button? _debianDownloadButton;
     private bool _installingAttacker;
+    private bool _kaliConfigured;
     private Button? _installAttackerButton;
     private string? _verifiedKaliPath;
     private string? _installedKaliFolder;
@@ -541,7 +542,11 @@ public sealed class MainWindow : Window
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         var installAttacker = Button(_installingAttacker ? "Installing..." : "Install Attacker",
             () => _ = InstallAttackerAsync());
-        installAttacker.IsEnabled = hypervisorReady && _kaliVerified && !_installingAttacker;
+        installAttacker.IsEnabled = hypervisorReady && _kaliVerified && !_installingAttacker && !_kaliConfigured;
+        if (_kaliConfigured) {
+            installAttacker.Content = "Kali configured";
+            installAttacker.BorderBrush = Paint(Green);
+        }
         _installAttackerButton = installAttacker;
         attackerActions.Children.Add(installAttacker);
         attackerControls.Children.Add(attackerActions);
@@ -594,7 +599,7 @@ public sealed class MainWindow : Window
         attackerProgressArea.Children.Add(_attackerProgress);
         attackerCard.Children.Add(attackerProgressArea);
         var attacker = Tile(attackerCard); attacker.Padding = new Thickness(7);
-        SetReadyOutline(attacker, false); // No verified attacker VM yet.
+        SetReadyOutline(attacker, _kaliConfigured); // VM registration and configuration completed; guest check still pending.
         var attackerLayer = WithLayer(attacker, "LAYER 03", "Virtual Machines  /  Attacker");
         Grid.SetColumn(attackerLayer, 0); network.Children.Add(attackerLayer);
         var link = Stack(3);
@@ -1012,6 +1017,7 @@ public sealed class MainWindow : Window
                     MarkKaliExtracted(Path.GetDirectoryName(cfgMatch.Groups[1].Value)!);
                 _attackerProgress.Value = 100;
                 _attackerProgressText.Text = "Kali registered and configured - guest verification pending";
+                _kaliConfigured = true;
                 return;
             }
             if (registeredKali.Count > 1)
@@ -1155,6 +1161,7 @@ public sealed class MainWindow : Window
             if (cfgMatchFinal.Success)
                 MarkKaliExtracted(Path.GetDirectoryName(cfgMatchFinal.Groups[1].Value)!);
             _attackerProgressText.Text = "Kali registered and configured - guest verification pending";
+            _kaliConfigured = true;
             _attackerProgress.Value = 100;
         }
         catch (Exception ex)
@@ -1167,8 +1174,9 @@ public sealed class MainWindow : Window
             _attackerProgress.IsIndeterminate = false;
             _installingAttacker = false;
             if (_installAttackerButton is not null) {
-                _installAttackerButton.IsEnabled = true;
-                _installAttackerButton.Content = "Install Attacker";
+                _installAttackerButton.IsEnabled = !_kaliConfigured;
+                _installAttackerButton.Content = _kaliConfigured ? "Kali configured" : "Install Attacker";
+                if (_kaliConfigured) _installAttackerButton.BorderBrush = Paint(Green);
             }
         }
     }
