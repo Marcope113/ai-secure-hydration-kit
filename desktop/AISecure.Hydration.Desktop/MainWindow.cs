@@ -19,6 +19,7 @@ public sealed class MainWindow : Window
     private Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
     private string _selected = "kali";
     private bool _installingVirtualBox;
+    private bool _removingVirtualBox;
     private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
     private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
     private ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
@@ -186,7 +187,13 @@ public sealed class MainWindow : Window
             line.HorizontalAlignment = HorizontalAlignment.Stretch;
             foundationInfo.Children.Add(line);
         }
-        if (!hypervisorReady)
+        if (hypervisorReady)
+        {
+            var uninstallHypervisor = Button("Uninstall VirtualBox", () => _ = UninstallVirtualBoxAsync());
+            uninstallHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
+            foundationInfo.Children.Add(uninstallHypervisor);
+        }
+        else
         {
             var installHypervisor = Button("Install VirtualBox", () => _ = InstallVirtualBoxAsync());
             installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
@@ -309,6 +316,88 @@ public sealed class MainWindow : Window
             body.Children.Add(Button("Manual instructions", () => ShowInstructions(title, manual)));
         }
         return Tile(body);
+    }
+
+    private async Task UninstallVirtualBoxAsync()
+    {
+        if (_removingVirtualBox || _installingVirtualBox) return;
+        var vboxManage = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Oracle", "VirtualBox", "VBoxManage.exe");
+        try
+        {
+            if (!File.Exists(vboxManage))
+            {
+                ShowSetup();
+                return;
+            }
+            var check = new ProcessStartInfo(vboxManage) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            check.ArgumentList.Add("list");
+            check.ArgumentList.Add("runningvms");
+            using (var p = Process.Start(check) ?? throw new InvalidOperationException("Cannot inspect running VMs."))
+            {
+                var outputTask = p.StandardOutput.ReadToEndAsync();
+                var errorTask = p.StandardError.ReadToEndAsync();
+                await p.WaitForExitAsync();
+                var output = await outputTask;
+                var error = await errorTask;
+                if (p.ExitCode != 0) throw new InvalidOperationException("Cannot verify VM state: " + error);
+                if (!string.IsNullOrWhiteSpace(output))
+                {
+                    ShowInstructions("Uninstall blocked", "Shut down all running VirtualBox VMs before uninstalling. No changes were made.");
+                    return;
+                }
+            }
+            var dialog = new Window {
+                Title = "Confirm VirtualBox removal", Width = 560, Height = 260,
+                Background = Paint("#152332"), WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            var panel = Stack(12);
+            panel.Margin = new Thickness(22);
+            panel.Children.Add(Txt("Uninstall Oracle VirtualBox from this Windows host?", 16, Text));
+            panel.Children.Add(Txt("This removes the hypervisor and may disrupt your lab. The app will not delete VM files, but the uninstaller's behavior is outside its control. Back up your VMs first.", 12, Yellow));
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+            buttons.Children.Add(Button("Cancel", () => dialog.Close(false)));
+            buttons.Children.Add(Button("Uninstall VirtualBox", () => dialog.Close(true)));
+            panel.Children.Add(buttons);
+            dialog.Content = panel;
+            if (!await dialog.ShowDialog<bool>(this)) return;
+
+            _removingVirtualBox = true;
+            _activity.Text = "Uninstalling VirtualBox using winget...";
+            var start = new ProcessStartInfo("winget.exe") {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            foreach (var arg in new[] { "uninstall", "--id", "Oracle.VirtualBox", "--exact",
+                "--source", "winget", "--accept-source-agreements" })
+                start.ArgumentList.Add(arg);
+            using var process = Process.Start(start) ?? throw new InvalidOperationException("Unable to start winget.");
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var outputText = await stdoutTask;
+            var errorText = await stderrTask;
+            var logDir = Path.Combine(_root, "logs");
+            Directory.CreateDirectory(logDir);
+            var logPath = Path.Combine(logDir, "virtualbox-uninstall.log");
+            await File.WriteAllTextAsync(logPath, outputText + Environment.NewLine + errorText);
+            if (process.ExitCode != 0)
+                throw new InvalidOperationException($"winget exited with code {process.ExitCode}. Log: {logPath}");
+            _activity.Text = "VirtualBox removal completed. Checking installation status...";
+        }
+        catch (Exception ex)
+        {
+            _activity.Text = "VirtualBox removal failed: " + ex.Message;
+            ShowInstructions("VirtualBox uninstall failed", ex.Message);
+        }
+        finally
+        {
+            _removingVirtualBox = false;
+            ShowSetup();
+        }
     }
 
     private async Task InstallVirtualBoxAsync()
