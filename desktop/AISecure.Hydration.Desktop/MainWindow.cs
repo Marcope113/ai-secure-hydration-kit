@@ -807,12 +807,19 @@ public sealed class MainWindow : Window
         if (!await confirmation.ShowDialog<bool>(this)) return;
 
         _installingAttacker = true;
-        if (_installAttackerButton is not null) _installAttackerButton.IsEnabled = false;
+        if (_installAttackerButton is not null) {
+            _installAttackerButton.IsEnabled = false;
+            _installAttackerButton.Content = "Installing...";
+        }
+        // Archive extraction has no reliable percentage from tar.exe.
+        // Show an active indeterminate bar rather than inventing progress.
+        _attackerProgress.IsIndeterminate = true;
+        _attackerProgressText.Text = "Preparing Kali extraction...";
         try
         {
             var workspace = Path.Combine(_root, "virtual-machines", "kali");
             Directory.CreateDirectory(workspace);
-            _attackerProgressText.Text = "Extracting verified Kali image...";
+            _attackerProgressText.Text = "Extracting Kali archive (working)...";
             var extraction = new ProcessStartInfo("tar.exe") {
                 UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardError = true, RedirectStandardOutput = true
@@ -831,9 +838,13 @@ public sealed class MainWindow : Window
                 if (process.ExitCode != 0)
                     throw new InvalidOperationException("Extraction failed. Windows tar may not support 7z: " + error);
             }
+            _attackerProgress.IsIndeterminate = false;
+            _attackerProgress.Value = 70;
+            _attackerProgressText.Text = "Extraction complete - locating VM configuration...";
             var configs = Directory.GetFiles(workspace, "*.vbox", SearchOption.AllDirectories);
             if (configs.Length != 1)
                 throw new InvalidOperationException($"Expected one Kali .vbox file; found {configs.Length}. No VM registered.");
+            _attackerProgress.Value = 80;
             _attackerProgressText.Text = "Registering Kali in VirtualBox...";
             async Task<string> VBox(params string[] args)
             {
@@ -856,6 +867,8 @@ public sealed class MainWindow : Window
             var existing = await VBox("list", "vms");
             if (!existing.Contains(config, StringComparison.OrdinalIgnoreCase))
                 await VBox("registervm", config);
+            _attackerProgress.Value = 90;
+            _attackerProgressText.Text = "Applying Kali memory, CPUs and internal network...";
             // Resolve the registered machine by its actual .vbox path.
             var vmDocument = System.Xml.Linq.XDocument.Load(config);
             var name = vmDocument.Descendants().FirstOrDefault(e => e.Name.LocalName == "Machine")?.Attribute("name")?.Value
@@ -864,17 +877,22 @@ public sealed class MainWindow : Window
                 (Math.Clamp(ReadVmResource("attacker", "memory", 2), 1, 8) * 1024).ToString(),
                 "--cpus", Math.Clamp(ReadVmResource("attacker", "processors", 2), 1, 4).ToString(),
                 "--nic1", "intnet", "--intnet1", "aisecurelab");
-            _attackerProgressText.Text = "Kali registered - start and verify guest before Ready";
+            _attackerProgressText.Text = "Kali registered and configured - guest verification pending";
             _attackerProgress.Value = 100;
         }
         catch (Exception ex)
         {
+            _attackerProgress.IsIndeterminate = false;
             _attackerProgressText.Text = "Kali setup failed: " + ex.Message;
         }
         finally
         {
+            _attackerProgress.IsIndeterminate = false;
             _installingAttacker = false;
-            if (_installAttackerButton is not null) _installAttackerButton.IsEnabled = true;
+            if (_installAttackerButton is not null) {
+                _installAttackerButton.IsEnabled = true;
+                _installAttackerButton.Content = "Install Attacker";
+            }
         }
     }
 
