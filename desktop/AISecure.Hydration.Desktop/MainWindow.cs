@@ -419,7 +419,8 @@ public sealed class MainWindow : Window
     private void Header(string section)
     {
         _page.Children.Clear();
-        var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12,
+            HorizontalAlignment = HorizontalAlignment.Center };
         var mark = new Border {
             Width = 43, Height = 43, CornerRadius = new CornerRadius(11),
             BorderThickness = new Thickness(2), BorderBrush = Paint(Accent),
@@ -436,7 +437,9 @@ public sealed class MainWindow : Window
         brandName.VerticalAlignment = VerticalAlignment.Center;
         brand.Children.Add(brandName);
         _page.Children.Add(brand);
-        _page.Children.Add(Txt(section, 12, Muted, FontWeight.SemiBold));
+        var stepLabel = Txt(section, 12, Muted, FontWeight.SemiBold);
+        stepLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _page.Children.Add(stepLabel);
     }
     private void Section(string title) => _page.Children.Add(Txt(title, 16, Accent, FontWeight.Bold));
 
@@ -547,6 +550,9 @@ public sealed class MainWindow : Window
 
         var overviewTile = Tile(overview);
         overviewTile.Padding = new Thickness(16, 15);
+        overviewTile.Width = 1450;
+        overviewTile.MaxWidth = 1490;
+        overviewTile.HorizontalAlignment = HorizontalAlignment.Center;
         _page.Children.Add(overviewTile);
 
         Section("VIRTUAL LAB ARCHITECTURE");
@@ -1018,7 +1024,11 @@ public sealed class MainWindow : Window
         isoLocation.Children.Add(storageTree);
         var openStorageRoot = Button("Open Hydration Kit Root", () => OpenStoragePath(storageRoot));
         isoLocation.Children.Add(openStorageRoot);
-        _page.Children.Add(Tile(isoLocation, "#122432"));
+        var isoStorageTile = Tile(isoLocation, "#122432");
+        isoStorageTile.Width = 1450;
+        isoStorageTile.MaxWidth = 1490;
+        isoStorageTile.HorizontalAlignment = HorizontalAlignment.Center;
+        _page.Children.Add(isoStorageTile);
 
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
