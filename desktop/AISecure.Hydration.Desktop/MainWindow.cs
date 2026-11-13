@@ -740,11 +740,7 @@ public sealed class MainWindow : Window
         _dhcpStateLabel.TextAlignment = TextAlignment.Center;
         dhcpPanel.Children.Add(_dhcpStateLabel);
         dhcpPanel.Children.Add(Txt("10.4.4.100–200  /  255.255.255.0", 10, Muted));
-        var dhcpAction = Button(_dhcpConfigured ? "DHCP Enabled" : "Enable DHCP", () => _ = ConfigureDhcpAsync());
-        dhcpAction.IsEnabled = hypervisorReady && !_configuringDhcp && !_dhcpConfigured;
-        dhcpAction.HorizontalAlignment = HorizontalAlignment.Center;
-        _dhcpButton = dhcpAction;
-        dhcpPanel.Children.Add(dhcpAction);
+        dhcpPanel.Children.Add(Txt("Automatic on VM start", 10, Muted));
         var dhcpTile = Tile(dhcpPanel, "#20384A");
         dhcpTile.Padding = new Thickness(10, 9);
         dhcpTile.BorderBrush = Paint(_dhcpConfigured ? Green : Yellow);
@@ -1380,8 +1376,9 @@ public sealed class MainWindow : Window
             if (info.ExitCode != 0) throw new InvalidOperationException(stateError);
             if (state.Contains("VMState=\"running\"", StringComparison.OrdinalIgnoreCase))
             {
-                _attackerProgressText.Text = "Kali running - requesting DHCP...";
-                _ = RequestKaliDhcpAsync(uuid);
+                _attackerProgressText.Text = "Kali running - checking DHCP...";
+                await ConfigureDhcpAsync();
+                if (_dhcpConfigured) _ = RequestKaliDhcpAsync(uuid);
                 return;
             }
             if (!state.Contains("VMState=\"poweroff\"", StringComparison.OrdinalIgnoreCase) &&
@@ -1389,9 +1386,15 @@ public sealed class MainWindow : Window
                 throw new InvalidOperationException("Kali is not in a startable state.");
             var launch = new ProcessStartInfo(vbox) { UseShellExecute = true };
             foreach (var arg in new[] { "startvm", uuid, "--type", "gui" }) launch.ArgumentList.Add(arg);
+            await ConfigureDhcpAsync();
+            if (!_dhcpConfigured) {
+                _attackerProgressText.Text = "DHCP setup failed. Kali will start, but network configuration is pending.";
+            }
             Process.Start(launch);
-            _attackerProgressText.Text = "Opening Kali - DHCP will be requested after guest boot...";
-            _ = RequestKaliDhcpAsync(uuid);
+            if (_dhcpConfigured) {
+                _attackerProgressText.Text = "Opening Kali - requesting DHCP after guest boot...";
+                _ = RequestKaliDhcpAsync(uuid);
+            }
         }
         catch (Exception ex) { _attackerProgressText.Text = "Cannot open Kali: " + ex.Message; }
     }
