@@ -594,15 +594,15 @@ public sealed class MainWindow : Window
         var deployArea = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
         deployArea.VerticalAlignment = VerticalAlignment.Center;
         var pipeline = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("76,14,61,14,61,14,61"),
-            RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
+            ColumnDefinitions = new ColumnDefinitions("82,12,65,12,65,12,65"),
+            RowDefinitions = new RowDefinitions("42,Auto"), RowSpacing = 4
         };
         var deployButton = Button("➜", () => _ = DeployKaliAsync());
-        deployButton.Width = 28;
-        deployButton.Height = 28;
+        deployButton.Width = 34;
+        deployButton.Height = 34;
         deployButton.Padding = new Thickness(0);
-        deployButton.FontSize = 16;
-        deployButton.CornerRadius = new CornerRadius(15);
+        deployButton.FontSize = 19;
+        deployButton.CornerRadius = new CornerRadius(18);
         deployButton.BorderBrush = Paint("#45C8E8");
         deployButton.Foreground = Paint("#45C8E8");
         deployButton.IsEnabled = hypervisorReady && !_deployingKali;
@@ -610,17 +610,17 @@ public sealed class MainWindow : Window
         deployButton.VerticalAlignment = VerticalAlignment.Center;
         _deployKaliButton = deployButton;
         pipeline.Children.Add(deployButton);
-        var deployCaption = Txt("Deploy Kali Linux", 10, "#45C8E8", FontWeight.SemiBold);
+        var deployCaption = Txt("Deploy Kali Linux", 11, "#45C8E8", FontWeight.SemiBold);
         deployCaption.TextAlignment = TextAlignment.Center;
         Grid.SetRow(deployCaption, 1);
         pipeline.Children.Add(deployCaption);
         Border Stage(int column, string label, bool completed, bool available, Action click, string hint)
         {
-            var mark = Txt(completed ? "✓" : "", 13, completed ? "#102A25" : Muted, FontWeight.Bold);
+            var mark = Txt(completed ? "✓" : "", 16, completed ? "#102A25" : Muted, FontWeight.Bold);
             mark.HorizontalAlignment = HorizontalAlignment.Center;
             mark.VerticalAlignment = VerticalAlignment.Center;
             var circle = new Border {
-                Width = 25, Height = 25, CornerRadius = new CornerRadius(13),
+                Width = 32, Height = 32, CornerRadius = new CornerRadius(17),
                 Background = Paint(completed ? Green : "#263D50"),
                 BorderBrush = Paint(completed ? Green : "#668196"),
                 BorderThickness = new Thickness(2),
@@ -634,7 +634,7 @@ public sealed class MainWindow : Window
             ToolTip.SetTip(circle, hint);
             Grid.SetColumn(circle, column);
             pipeline.Children.Add(circle);
-            var caption = Txt(label, 10, completed ? Green : Muted, FontWeight.SemiBold);
+            var caption = Txt(label, 11, completed ? Green : Muted, FontWeight.SemiBold);
             caption.TextAlignment = TextAlignment.Center;
             Grid.SetColumn(caption, column);
             Grid.SetRow(caption, 1);
@@ -2002,15 +2002,15 @@ public sealed class MainWindow : Window
     {
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
         var pipeline = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("69,10,47,10,47,10,62"),
+            ColumnDefinitions = new ColumnDefinitions("75,9,54,9,54,9,68"),
             RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
         };
         var deploy = Button("➜", () => _ = DeployDebianAsync());
-        deploy.Width = 28;
-        deploy.Height = 28;
+        deploy.Width = 34;
+        deploy.Height = 34;
         deploy.Padding = new Thickness(0);
-        deploy.FontSize = 16;
-        deploy.CornerRadius = new CornerRadius(15);
+        deploy.FontSize = 19;
+        deploy.CornerRadius = new CornerRadius(18);
         deploy.BorderBrush = Paint("#45C8E8");
         deploy.Foreground = Paint("#45C8E8");
         deploy.IsEnabled = hypervisorReady && !_deployingDebian;
@@ -2018,7 +2018,7 @@ public sealed class MainWindow : Window
         deploy.VerticalAlignment = VerticalAlignment.Center;
         _deployDebianButton = deploy;
         pipeline.Children.Add(deploy);
-        var deployCaption = Txt("Deploy Debian", 9, "#45C8E8", FontWeight.SemiBold);
+        var deployCaption = Txt("Deploy Debian", 10, "#45C8E8", FontWeight.SemiBold);
         deployCaption.TextAlignment = TextAlignment.Center;
         Grid.SetRow(deployCaption, 1);
         pipeline.Children.Add(deployCaption);
@@ -2043,8 +2043,8 @@ public sealed class MainWindow : Window
             ToolTip.SetTip(circle, hint);
             Grid.SetColumn(circle, col);
             pipeline.Children.Add(circle);
-            if (col == 4) lastStage = circle;
-            var caption = Txt(name, 9, completed ? Green : Muted, FontWeight.SemiBold);
+            if (col == 6) lastStage = circle;
+            var caption = Txt(name, 10, completed ? Green : Muted, FontWeight.SemiBold);
             caption.TextAlignment = TextAlignment.Center;
             Grid.SetColumn(caption, col);
             Grid.SetRow(caption, 1);
