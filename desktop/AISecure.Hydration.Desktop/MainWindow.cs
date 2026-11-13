@@ -237,6 +237,24 @@ public sealed class MainWindow : Window
     private static string State(bool ok) => ok ? "SUPPORTED" : "NOT SUPPORTED";
     private string Existing(string name) => File.Exists(Path.Combine(_root, name)) ? "Found" : "Not found";
 
+    private static Control CircuitConnector(bool active)
+    {
+        var color = active ? Green : "#4E687C";
+        var connector = Stack(0);
+        connector.HorizontalAlignment = HorizontalAlignment.Stretch;
+        connector.Children.Add(new Border {
+            Width = 3, Height = 18, Background = Paint(color),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        connector.Children.Add(new Border {
+            Width = 9, Height = 9, CornerRadius = new CornerRadius(5),
+            Background = Paint(color), BorderBrush = Paint("#0F2030"),
+            BorderThickness = new Thickness(1),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        return connector;
+    }
+
     private void Header(string section)
     {
         _page.Children.Clear();
@@ -386,6 +404,8 @@ public sealed class MainWindow : Window
         var targetLayer = WithLayer(targetTile, "LAYER 03", "Virtual Machines  /  Victim");
         Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
+        // VM connection remains muted until guests are actually verified.
+        layers.Children.Add(CircuitConnector(false));
 
         // The hypervisor is the foundation beneath both guest machines.
         var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -458,6 +478,8 @@ public sealed class MainWindow : Window
         pendingHostChecks.TextAlignment = TextAlignment.Center;
         pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(pendingHostChecks);
+        // Only confirmed host prerequisites and installed hypervisor turn this link green.
+        layers.Children.Add(CircuitConnector(hypervisorReady && archOk && diskOk && ramOk && logicalProcessors >= 4));
         layers.Children.Add(WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system"));
         topology.Children.Add(layers);
         var flowNote = Txt("SETUP FLOW   Host  →  Hypervisor  →  Virtual Machines  →  Network validation", 12, Accent);
@@ -510,7 +532,9 @@ public sealed class MainWindow : Window
         var exitButton = Button("Exit", Close);
         exitButton.MinWidth = 220;
         exitButton.Padding = new Thickness(28, 13);
-        exitButton.Background = Paint("#E58A35");
+        exitButton.Background = Paint("#F5AD63");
+        exitButton.BorderBrush = Paint("#F0F5FA");
+        exitButton.BorderThickness = new Thickness(1.5);
         exitButton.Foreground = Paint("#101820");
         exitButton.CornerRadius = new CornerRadius(9);
         exitButton.FontWeight = FontWeight.Bold;
