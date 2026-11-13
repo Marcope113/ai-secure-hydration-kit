@@ -132,37 +132,86 @@ public sealed class MainWindow : Window
         catch (Exception ex) { _activity.Text = "Could not save VM RAM: " + ex.Message; }
     }
 
-    private Control VmRamPicker(string role, int fallback)
+    private int ReadVmResource(string role, string resource, int fallback)
     {
-        var panel = Stack(5);
-        var hostGb = GetPhysicalRamGiB();
-        // Leave at least 4 GB for Windows; never offer more than 64 GB per VM.
-        var maxGb = hostGb is null ? 16 : Math.Clamp((int)Math.Floor(hostGb.Value) - 4, 2, 64);
-        var initialGb = Math.Clamp(ReadVmRam(role, fallback) / 1024, 1, maxGb);
-        var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-        var label = Txt("PLANNED RAM", 12, Muted, FontWeight.SemiBold);
-        var value = Txt($"{initialGb} GB", 13, Accent, FontWeight.Bold);
-        Grid.SetColumn(value, 1);
-        heading.Children.Add(label);
-        heading.Children.Add(value);
-        panel.Children.Add(heading);
-        var slider = new Slider {
-            Minimum = 1, Maximum = maxGb, TickFrequency = 1,
-            IsSnapToTickEnabled = true, Value = initialGb,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        slider.PropertyChanged += (_, args) =>
+        try
         {
-            if (args.Property == Slider.ValueProperty)
+            var path = Path.Combine(_root, "vm-settings.json");
+            if (File.Exists(path))
             {
-                var gb = (int)Math.Round(slider.Value);
-                value.Text = $"{gb} GB";
-                SaveVmRam(role, gb * 1024);
+                using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                if (doc.RootElement.TryGetProperty(role, out var vm)
+                    && vm.TryGetProperty(resource, out var number)
+                    && number.TryGetInt32(out var value)) return value;
             }
-        };
-        panel.Children.Add(slider);
-        var range = Txt($"1 GB  —  {maxGb} GB maximum (1 GB increments)", 11, Muted);
-        panel.Children.Add(range);
+        }
+        catch { /* Invalid settings fall back to defaults. */ }
+        return resource == "memory" ? ReadVmRam(role, fallback * 1024) / 1024 : fallback;
+    }
+
+    private void SaveVmResource(string role, string resource, int value)
+    {
+        try
+        {
+            Directory.CreateDirectory(_root);
+            var settings = new Dictionary<string, Dictionary<string, int>>();
+            var path = Path.Combine(_root, "vm-settings.json");
+            if (File.Exists(path))
+            {
+                try
+                {
+                    settings = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, int>>>(File.ReadAllText(path))
+                        ?? settings;
+                }
+                catch { /* Recover from malformed settings. */ }
+            }
+            if (!settings.ContainsKey(role)) settings[role] = new Dictionary<string, int>();
+            settings[role][resource] = value;
+            File.WriteAllText(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
+            _activity.Text = $"Saved planned {role} {resource}: {value}. Not yet applied to VirtualBox.";
+        }
+        catch (Exception ex) { _activity.Text = "Could not save VM resources: " + ex.Message; }
+    }
+
+    private Control VmResourceControls(string role)
+    {
+        var panel = Stack(8);
+        panel.Width = 205;
+        panel.Children.Add(Txt("VM RESOURCES", 11, Accent, FontWeight.Bold));
+        var hostRam = GetPhysicalRamGiB();
+        var maxRam = hostRam is null ? 16 : Math.Clamp((int)Math.Floor(hostRam.Value) - 4, 2, 64);
+        var cpuMax = Math.Clamp(Environment.ProcessorCount, 1, 16);
+        var diskMax = 120;
+
+        void AddResource(string name, string key, int minimum, int maximum, int fallback, string unit)
+        {
+            var current = Math.Clamp(ReadVmResource(role, key, fallback), minimum, maximum);
+            var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+            var label = Txt(name, 11, Muted, FontWeight.SemiBold);
+            var value = Txt($"{current} {unit}".TrimEnd(), 11, Accent, FontWeight.Bold);
+            Grid.SetColumn(value, 1);
+            heading.Children.Add(label);
+            heading.Children.Add(value);
+            panel.Children.Add(heading);
+            var slider = new Slider {
+                Minimum = minimum, Maximum = maximum, TickFrequency = 1,
+                IsSnapToTickEnabled = true, Value = current,
+                Foreground = Paint(Accent), Background = Paint("#294153"),
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            slider.PropertyChanged += (_, args) =>
+            {
+                if (args.Property != Slider.ValueProperty) return;
+                var selected = (int)Math.Round(slider.Value);
+                value.Text = $"{selected} {unit}".TrimEnd();
+                SaveVmResource(role, key, selected);
+            };
+            panel.Children.Add(slider);
+        }
+
+        AddResource("DISK", "disk", 20, diskMax, role == "attacker" ? 50 : 30, "GB");
+        AddResource("MEMORY", "memory", 1, maxRam, role == "attacker" ? 4 : 2, "GB");
+        AddResource("PROCESSORS", "processors", 1, cpuMax, 2, "");
         return panel;
     }
 
@@ -270,9 +319,12 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("NOT INSTALLED", 13, Yellow, FontWeight.Bold));
         attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
-        attackerBody.Children.Add(VmRamPicker("attacker", 4096));
         attackerBody.Children.Add(attackerControls);
-        var attacker = Tile(attackerBody);
+        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,205"), ColumnSpacing = 16 };
+        Grid.SetColumn(attackerBody, 0); attackerLayout.Children.Add(attackerBody);
+        var attackerResources = VmResourceControls("attacker");
+        Grid.SetColumn(attackerResources, 1); attackerLayout.Children.Add(attackerResources);
+        var attacker = Tile(attackerLayout);
         Grid.SetColumn(attacker, 0); network.Children.Add(attacker);
         var link = Stack(8);
         link.VerticalAlignment = VerticalAlignment.Center;
@@ -299,13 +351,17 @@ public sealed class MainWindow : Window
         };
         Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
         var targetActions = Stack(9);
-        targetActions.Children.Add(VmRamPicker("target", 2048));
         targetActions.Children.Add(TargetControls());
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
             "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
             targetActions);
-        Grid.SetColumn(target, 2); network.Children.Add(target);
+        var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,205"), ColumnSpacing = 16 };
+        Grid.SetColumn(target, 0); targetLayout.Children.Add(target);
+        var targetResources = VmResourceControls("target");
+        Grid.SetColumn(targetResources, 1); targetLayout.Children.Add(targetResources);
+        var targetTile = Tile(targetLayout);
+        Grid.SetColumn(targetTile, 2); network.Children.Add(targetTile);
         AddLayer(LayerLabel("LAYER 03", "Virtual Machines", "Guests and isolated network", Yellow), network, 0);
 
         // The hypervisor is the foundation beneath both guest machines.
