@@ -25,8 +25,8 @@ public sealed class MainWindow : Window
     public MainWindow()
     {
         Title = "AI Secure Academy | Hydration Kit";
-        Width = 960;
-        Height = 720;
+        Width = 1120;
+        Height = 800;
         MinWidth = 680;
         MinHeight = 560;
         Background = new SolidColorBrush(Color.Parse("#0B1520"));
@@ -37,15 +37,22 @@ public sealed class MainWindow : Window
         main.Children.Add(Label("HYDRATION KIT: Linux PrivEsc Techniques", 24, "#F1F5F9", FontWeight.SemiBold));
         main.Children.Add(Label("Windows desktop preview  |  " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), 13, "#9FB0BF"));
         main.Children.Add(new Border { Height = 1, Background = new SolidColorBrush(Color.Parse("#304557")) });
-        main.Children.Add(Label("LAB DASHBOARD", 18, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("SETUP OVERVIEW", 18, "#55DCE8", FontWeight.Bold));
         main.Children.Add(Label("Two virtual machines. One guided learning experience.", 13, "#A7B8CB"));
+        main.Children.Add(Label("REQUIREMENTS", 15, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(RequirementCard("Windows and architecture", "Detects supported Windows host and CPU architecture.", "Windows 11 x64 is supported.", false));
+        main.Children.Add(RequirementCard("VirtualBox hypervisor", "Checks the installed VirtualBox executable.", "If missing: install VirtualBox from https://www.virtualbox.org/wiki/Downloads, then restart this app. For automated Windows installation: winget install --id Oracle.VirtualBox --exact", true));
+        main.Children.Add(RequirementCard("Disk space and memory", "Checks disk capacity; memory verification is planned.", "Recommended: at least 8 GB RAM and 35 GB free disk for the initial VM. Two VMs may require more.", false));
         main.Children.Add(Label("HOST ENVIRONMENT", 15, "#55DCE8", FontWeight.Bold));
         main.Children.Add(_host);
+        main.Children.Add(Label("VIRTUAL MACHINES", 15, "#55DCE8", FontWeight.Bold));
         main.Children.Add(Label("TARGET  |  Debian 13", 15, "#C7AAFF", FontWeight.Bold));
         main.Children.Add(_target);
+        main.Children.Add(InstallAction("Install Target", "Target installation is not enabled in this preview. The Debian ISO is already attached; unattended provisioning needs validation."));
         main.Children.Add(Label("ATTACKER  |  Select distribution", 15, "#C7AAFF", FontWeight.Bold));
         main.Children.Add(_choice);
         main.Children.Add(_attacker);
+        main.Children.Add(InstallAction("Install Attacker", "Attacker installation is not enabled in this preview. Choose Kali or Parrot and save your selection first."));
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
         var refresh = new Button { Content = "Refresh diagnostics", Padding = new Thickness(16, 10) };
@@ -64,13 +71,33 @@ public sealed class MainWindow : Window
         main.Children.Add(Label("Lessons are placeholders; offline content and validation are not enabled.", 12, "#E8B65B"));
         main.Children.Add(Label("ACTIVITY", 15, "#55DCE8", FontWeight.Bold));
         main.Children.Add(_status);
-        main.Children.Add(Label("Preview: no VM creation, OS installation or downloads are enabled.", 12, "#E8B65B"));
+        main.Children.Add(Label("Preview: installation controls are disabled until verified. Manual instructions are available for requirements.", 12, "#E8B65B"));
         Content = new ScrollViewer { Content = main };
         Refresh();
     }
 
     private static TextBlock Label(string value, double size, string color, FontWeight weight = FontWeight.Normal) =>
         new() { Text = value, FontSize = size, Foreground = new SolidColorBrush(Color.Parse(color)), FontWeight = weight, TextWrapping = TextWrapping.Wrap };
+
+    private Border RequirementCard(string name, string description, string manual, bool installable)
+    {
+        var inner = new StackPanel { Spacing = 8 };
+        inner.Children.Add(Label(name, 16, "#F2F6FC", FontWeight.SemiBold));
+        inner.Children.Add(Label(description, 13, "#A7B8CB"));
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        controls.Children.Add(new Button { Content = "Install (not available)", IsEnabled = false });
+        var help = new Button { Content = "Manual instructions" };
+        help.Click += (_, _) => _status.Text = name + ": " + manual;
+        controls.Children.Add(help);
+        inner.Children.Add(controls);
+        return new Border { Background = new SolidColorBrush(Color.Parse("#172737")), CornerRadius = new CornerRadius(10), Padding = new Thickness(16), Child = inner };
+    }
+
+    private Button InstallAction(string label, string message)
+    {
+        var button = new Button { Content = label + " (not available)", IsEnabled = false, HorizontalAlignment = HorizontalAlignment.Left };
+        return button;
+    }
 
     private void Refresh()
     {
