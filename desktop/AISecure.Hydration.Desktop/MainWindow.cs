@@ -422,6 +422,21 @@ public sealed class MainWindow : Window
     }
     private void Section(string title) => _page.Children.Add(Txt(title, 16, Accent, FontWeight.Bold));
 
+    private static Control VmDetails(string details)
+    {
+        var rows = Stack(2);
+        foreach (var line in details.Split('\\n'))
+        {
+            var separator = line.IndexOf("   ", StringComparison.Ordinal);
+            if (separator < 0) { rows.Children.Add(Txt(line, 13, Muted)); continue; }
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 9 };
+            row.Children.Add(Txt(line[..separator], 13, Accent, FontWeight.Bold));
+            row.Children.Add(Txt(line[(separator + 3)..].Trim(), 13, Muted));
+            rows.Children.Add(row);
+        }
+        return rows;
+    }
+
     private Border Machine(string symbol, string role, string name, string state, string color, string details, Control? action = null, Control? titleOverride = null)
     {
         var body = Stack(4);
@@ -433,7 +448,7 @@ public sealed class MainWindow : Window
         body.Children.Add(roleHeader);
         body.Children.Add(titleOverride ?? Txt(name, 22, Text, FontWeight.SemiBold));
         body.Children.Add(Txt(state, 13, color, FontWeight.Bold));
-        body.Children.Add(Txt(details, 14, Muted));
+        body.Children.Add(VmDetails(details));
         if (action is not null) body.Children.Add(action);
         // Inner VM content should not have its own outline; the outer VM tile owns it.
         return new Border { Background = Brushes.Transparent, Padding = new Thickness(19), Child = body };
@@ -593,11 +608,10 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Margin = new Thickness(10, 0, 0, 0);
         attackerBody.Children.Add(_attackerOs);
-        _kaliRuntimeLabel = Txt(_kaliRunning ? "● RUNNING  /  CONFIGURED" :
-            _kaliConfigured ? "● OFFLINE  /  CONFIGURED" : "● OFFLINE  /  NOT INSTALLED",
+        _kaliRuntimeLabel = Txt(_kaliRunning ? "● ONLINE" : "● OFFLINE",
             13, _kaliRunning ? Green : Yellow, FontWeight.Bold);
         attackerBody.Children.Add(_kaliRuntimeLabel);
-        attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Kali Linux (not installed)\nUSER:PASS   kali:kali (default image)", 14, Muted));
+        attackerBody.Children.Add(VmDetails("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Kali Linux (not installed)\nUSER:PASS   kali:kali (default image)"));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -671,7 +685,7 @@ public sealed class MainWindow : Window
         targetActions.Margin = new Thickness(0, 10, 0, 0);
         targetActions.Children.Add(TargetControls(hypervisorReady));
         var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
-            "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
+            "● OFFLINE", Yellow,
             "IP ADDRESS   10.4.4.20 (not configured)\nOS VERSION   Debian 13 (not installed)\nUSER:PASS   Set during installation",
             targetActions);
         target.Padding = new Thickness(10, 0, 0, 0);
@@ -967,8 +981,7 @@ public sealed class MainWindow : Window
             _kaliRunning = running;
             if (_kaliRuntimeLabel is not null)
             {
-                _kaliRuntimeLabel.Text = running ? "● RUNNING  /  CONFIGURED" :
-                    _kaliConfigured ? "● OFFLINE  /  CONFIGURED" : "● OFFLINE  /  NOT INSTALLED";
+                _kaliRuntimeLabel.Text = running ? "● ONLINE" : "● OFFLINE";
                 _kaliRuntimeLabel.Foreground = Paint(running ? Green : Yellow);
             }
         }
