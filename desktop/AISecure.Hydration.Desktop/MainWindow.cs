@@ -473,6 +473,17 @@ public sealed class MainWindow : Window
         var hypervisorReady = File.Exists(hypervisorPath);
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
         var attackerControls = Stack(2);
+        // Re-discover completed extraction after app restart or diagnostics refresh.
+        // Only expose folders with both VM configuration and a virtual disk.
+        var kaliExtractionRoot = Path.Combine(_root, "virtual-machines", "kali");
+        _installedKaliFolder = Directory.Exists(kaliExtractionRoot)
+            ? Directory.GetFiles(kaliExtractionRoot, "*.vbox", SearchOption.AllDirectories)
+                .Select(Path.GetDirectoryName)
+                .Where(folder => folder is not null &&
+                    Directory.GetFiles(folder, "*.vdi", SearchOption.AllDirectories).Length > 0)
+                .OrderByDescending(folder => folder, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault()
+            : null;
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         var getKali = Button("Get Kali Image", () => { if (_kaliVerified) OpenIsoFolder(); else _ = DownloadLabImageAsync("kali"); });
         getKali.IsEnabled = hypervisorReady && !_downloadingKali;
