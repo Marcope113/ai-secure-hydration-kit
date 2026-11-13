@@ -941,7 +941,7 @@ public sealed class MainWindow : Window
                 if (modifying.ExitCode != 0)
                     throw new InvalidOperationException("Kali configuration failed: " + modifyError);
                 var cfgMatch = System.Text.RegularExpressions.Regex.Match(infoOutput,
-                    @"(?m)^CfgFile=\"([^\"]+)\""); 
+                    @"(?m)^CfgFile=""([^""]+)"""); 
                 if (cfgMatch.Success)
                     MarkKaliExtracted(Path.GetDirectoryName(cfgMatch.Groups[1].Value)!);
                 _attackerProgress.Value = 100;
@@ -1085,7 +1085,7 @@ public sealed class MainWindow : Window
                 "--nic1", "intnet", "--intnet1", "aisecurelab");
             var registeredInfo = await VBox("showvminfo", vmId, "--machinereadable");
             var cfgMatchFinal = System.Text.RegularExpressions.Regex.Match(registeredInfo,
-                @"(?m)^CfgFile=\"([^\"]+)\"");
+                @"(?m)^CfgFile=""([^""]+)""");
             if (cfgMatchFinal.Success)
                 MarkKaliExtracted(Path.GetDirectoryName(cfgMatchFinal.Groups[1].Value)!);
             _attackerProgressText.Text = "Kali registered and configured - guest verification pending";
