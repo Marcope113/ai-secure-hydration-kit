@@ -14,6 +14,8 @@ public sealed class MainWindow : Window
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _host = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _target = new() { TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _targetIp = new() { Text = "IP: Not assigned", Foreground = new SolidColorBrush(Color.Parse("#A7B8CB")) };
+    private readonly TextBlock _attackerIp = new() { Text = "IP: Not assigned", Foreground = new SolidColorBrush(Color.Parse("#A7B8CB")) };
     private readonly TextBlock _attacker = new() { TextWrapping = TextWrapping.Wrap };
     private readonly ComboBox _choice = new()
     {
@@ -39,22 +41,46 @@ public sealed class MainWindow : Window
         main.Children.Add(Label("HYDRATION KIT: Linux PrivEsc Techniques", 24, "#F1F5F9", FontWeight.SemiBold));
         main.Children.Add(Label("Windows desktop preview  |  " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), 13, "#9FB0BF"));
         main.Children.Add(new Border { Height = 1, Background = new SolidColorBrush(Color.Parse("#304557")) });
-        main.Children.Add(Label("SETUP OVERVIEW", 18, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(Label("Two virtual machines. One guided learning experience.", 13, "#A7B8CB"));
-        main.Children.Add(Label("REQUIREMENTS", 15, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("VIRTUAL LAB TOPOLOGY", 18, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("Two isolated machines connected through the aisecurelab internal network.", 13, "#A7B8CB"));
+
+        var topology = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*"), ColumnSpacing = 14 };
+        var attackerCard = new StackPanel { Spacing = 10 };
+        attackerCard.Children.Add(Label("ATTACKER", 13, "#55DCE8", FontWeight.Bold));
+        attackerCard.Children.Add(Label("Kali Linux / Parrot OS", 20, "#F1F5F9", FontWeight.SemiBold));
+        attackerCard.Children.Add(_attacker);
+        attackerCard.Children.Add(_attackerIp);
+        attackerCard.Children.Add(Label("OS version: Not detected", 13, "#A7B8CB"));
+        attackerCard.Children.Add(_choice);
+        attackerCard.Children.Add(InstallAction("Install Attacker", "Attacker installation is not enabled yet."));
+        var attackerPanel = new Border { Background = new SolidColorBrush(Color.Parse("#172737")), CornerRadius = new CornerRadius(12), Padding = new Thickness(20), Child = attackerCard };
+        Grid.SetColumn(attackerPanel, 0);
+        topology.Children.Add(attackerPanel);
+
+        var link = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+        link.Children.Add(Label("<---->", 18, "#55DCE8", FontWeight.Bold));
+        link.Children.Add(Label("ISOLATED", 11, "#A7B8CB"));
+        Grid.SetColumn(link, 1);
+        topology.Children.Add(link);
+
+        var targetCard = new StackPanel { Spacing = 10 };
+        targetCard.Children.Add(Label("VICTIM / TARGET", 13, "#C7AAFF", FontWeight.Bold));
+        targetCard.Children.Add(Label("Debian 13", 20, "#F1F5F9", FontWeight.SemiBold));
+        targetCard.Children.Add(_target);
+        targetCard.Children.Add(_targetIp);
+        targetCard.Children.Add(Label("ISO: Debian 13.7.0 (guest not verified)", 13, "#A7B8CB"));
+        targetCard.Children.Add(InstallAction("Install Target", "Target installation is not enabled yet."));
+        var targetPanel = new Border { Background = new SolidColorBrush(Color.Parse("#172737")), CornerRadius = new CornerRadius(12), Padding = new Thickness(20), Child = targetCard };
+        Grid.SetColumn(targetPanel, 2);
+        topology.Children.Add(targetPanel);
+        main.Children.Add(topology);
+        main.Children.Add(Label("NETWORK  /  VirtualBox internal: aisecurelab  |  No external access after provisioning", 12, "#A7B8CB"));
+
+        main.Children.Add(Label("HOST REQUIREMENTS", 15, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(_host);
         main.Children.Add(RequirementCard("Windows and architecture", "Detects supported Windows host and CPU architecture.", "Windows 11 x64 is supported.", false));
         main.Children.Add(RequirementCard("VirtualBox hypervisor", "Checks the installed VirtualBox executable.", "If missing: install VirtualBox from https://www.virtualbox.org/wiki/Downloads, then restart this app. For automated Windows installation: winget install --id Oracle.VirtualBox --exact", true));
         main.Children.Add(RequirementCard("Disk space and memory", "Checks disk capacity; memory verification is planned.", "Recommended: at least 8 GB RAM and 35 GB free disk for the initial VM. Two VMs may require more.", false));
-        main.Children.Add(Label("HOST ENVIRONMENT", 15, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(_host);
-        main.Children.Add(Label("VIRTUAL MACHINES", 15, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(Label("TARGET  |  Debian 13", 15, "#C7AAFF", FontWeight.Bold));
-        main.Children.Add(_target);
-        main.Children.Add(InstallAction("Install Target", "Target installation is not enabled in this preview. The Debian ISO is already attached; unattended provisioning needs validation."));
-        main.Children.Add(Label("ATTACKER  |  Select distribution", 15, "#C7AAFF", FontWeight.Bold));
-        main.Children.Add(_choice);
-        main.Children.Add(_attacker);
-        main.Children.Add(InstallAction("Install Attacker", "Attacker installation is not enabled in this preview. Choose Kali or Parrot and save your selection first."));
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
         var refresh = new Button { Content = "Refresh diagnostics", Padding = new Thickness(16, 10) };
