@@ -928,7 +928,7 @@ public sealed class MainWindow : Window
             var error = await errorTask;
             if (p.ExitCode != 0) throw new InvalidOperationException(error);
             var matches = System.Text.RegularExpressions.Regex.Matches(output,
-                @"(?m)^""([^""]*kali-linux[^""]*)""\\s+\\{([a-fA-F0-9-]+)\\}",
+                @"(?m)^""([^""]*kali-linux[^""]*)""\s+\{([a-fA-F0-9-]+)\}",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (matches.Count != 1)
                 throw new InvalidOperationException("Expected exactly one registered Kali VM; found " + matches.Count);
@@ -945,13 +945,13 @@ public sealed class MainWindow : Window
             var state = await stateTask;
             var stateError = await errTask;
             if (info.ExitCode != 0) throw new InvalidOperationException(stateError);
-            if (state.Contains("VMState=\\\"running\\\"", StringComparison.OrdinalIgnoreCase))
+            if (state.Contains("VMState=\"running\"", StringComparison.OrdinalIgnoreCase))
             {
                 _attackerProgressText.Text = "Kali is already running in VirtualBox.";
                 return;
             }
-            if (!state.Contains("VMState=\\\"poweroff\\\"", StringComparison.OrdinalIgnoreCase) &&
-                !state.Contains("VMState=\\\"aborted\\\"", StringComparison.OrdinalIgnoreCase))
+            if (!state.Contains("VMState=\"poweroff\"", StringComparison.OrdinalIgnoreCase) &&
+                !state.Contains("VMState=\"aborted\"", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Kali is not in a startable state.");
             var launch = new ProcessStartInfo(vbox) { UseShellExecute = true };
             foreach (var arg in new[] { "startvm", uuid, "--type", "gui" }) launch.ArgumentList.Add(arg);
