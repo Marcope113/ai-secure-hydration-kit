@@ -970,16 +970,36 @@ public sealed class MainWindow : Window
                 return output;
             }
             var config = configs[0];
+            var vmDocument = System.Xml.Linq.XDocument.Load(config);
+            var machineElement = vmDocument.Descendants()
+                .FirstOrDefault(e => e.Name.LocalName == "Machine")
+                ?? throw new InvalidOperationException("Kali .vbox has no Machine element.");
+            var vmUuid = machineElement.Attribute("uuid")?.Value?.Trim('{', '}')
+                ?? throw new InvalidOperationException("Kali .vbox has no UUID.");
+            if (!Guid.TryParse(vmUuid, out var parsedUuid))
+                throw new InvalidOperationException("Kali .vbox contains an invalid UUID.");
+            var vmId = parsedUuid.ToString("D");
             var existing = await VBox("list", "vms");
-            if (!existing.Contains(config, StringComparison.OrdinalIgnoreCase))
+            var alreadyRegistered = existing.Contains("{" + vmId + "}", StringComparison.OrdinalIgnoreCase);
+            if (alreadyRegistered)
+            {
+                _attackerProgressText.Text = "Kali VM already registered - reusing existing machine...";
+                // The fresh extraction is redundant. Delete only this newly
+                // created timestamped directory, never the registered VM files.
+                Directory.Delete(workspace, recursive: true);
+            }
+            else
+            {
                 await VBox("registervm", config);
+            }
             _attackerProgress.Value = 90;
             _attackerProgressText.Text = "Applying Kali memory, CPUs and internal network...";
-            // Resolve the registered machine by its actual .vbox path.
-            var vmDocument = System.Xml.Linq.XDocument.Load(config);
-            var name = vmDocument.Descendants().FirstOrDefault(e => e.Name.LocalName == "Machine")?.Attribute("name")?.Value
-                ?? throw new InvalidOperationException("Cannot determine Kali VM name from .vbox configuration.");
-            await VBox("modifyvm", name, "--memory",
+            // Address the machine by UUID: names may differ or be duplicated.
+            var state = await VBox("showvminfo", vmId, "--machinereadable");
+            if (!state.Contains("VMState=\"poweroff\"", StringComparison.OrdinalIgnoreCase) &&
+                !state.Contains("VMState=\"aborted\"", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Kali VM is not powered off. Shut it down before changing its resources.");
+            await VBox("modifyvm", vmId, "--memory",
                 (Math.Clamp(ReadVmResource("attacker", "memory", 2), 1, 8) * 1024).ToString(),
                 "--cpus", Math.Clamp(ReadVmResource("attacker", "processors", 2), 1, 4).ToString(),
                 "--nic1", "intnet", "--intnet1", "aisecurelab");
