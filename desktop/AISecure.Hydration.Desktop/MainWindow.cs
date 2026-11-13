@@ -455,7 +455,7 @@ public sealed class MainWindow : Window
         targetActions.Children.Add(TargetControls());
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
-            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
+            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)",
             targetActions);
         target.Padding = new Thickness(0);
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -618,10 +618,15 @@ public sealed class MainWindow : Window
         _next.IsEnabled = false;
         _next.MinWidth = 155;
         _next.HorizontalAlignment = HorizontalAlignment.Right;
-        _next.Background = Paint("#176B80");
+        _next.Background = Paint("#142B42");
+        _next.BorderBrush = Paint("#53DCE8");
+        _next.BorderThickness = new Thickness(2);
+        _next.HorizontalContentAlignment = HorizontalAlignment.Center;
+        _next.VerticalContentAlignment = VerticalAlignment.Center;
         _next.Foreground = Paint("#F0F5FA");
         _next.CornerRadius = new CornerRadius(9);
         _next.FontWeight = FontWeight.SemiBold;
+        _next.Classes.Add("academy-next");
         Grid.SetColumn(_next, 2);
         footer.Children.Add(_next);
         _page.Children.Add(footer);
