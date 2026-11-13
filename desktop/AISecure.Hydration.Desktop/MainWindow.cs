@@ -28,6 +28,9 @@ public sealed class MainWindow : Window
     private double _debianPercent;
     private Button? _kaliDownloadButton;
     private Button? _debianDownloadButton;
+    private bool _kaliVerified;
+    private bool _debianVerified;
+    private string? _debianSha256;
     private string? _kaliSha256;
     private TextBlock? _kaliHashLabel;
     private string _kaliStatus = "Waiting to download";
@@ -464,7 +467,8 @@ public sealed class MainWindow : Window
         var attackerControls = Stack(2);
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         var getKali = Button("Get Kali Image", () => _ = DownloadLabImageAsync("kali"));
-        getKali.IsEnabled = hypervisorReady && !_downloadingKali;
+        getKali.IsEnabled = hypervisorReady && !_downloadingKali && !_kaliVerified;
+        if (_kaliVerified) { getKali.Content = "Kali downloaded"; getKali.BorderBrush = Paint(Green); }
         _kaliDownloadButton = getKali;
         attackerActions.Children.Add(getKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
@@ -783,7 +787,7 @@ public sealed class MainWindow : Window
         Status("Checking latest official image...", 0);
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
+            using var http = new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("AISecureAcademy-HydrationKit/1.0");
             Uri source;
             // Resolve the image filename from the official release directory,
@@ -826,6 +830,7 @@ public sealed class MainWindow : Window
             {
                 if (kali)
                 {
+                    _kaliVerified = true;
                     _kaliSha256 = actual;
                     if (_kaliHashLabel is not null)
                     {
@@ -833,10 +838,13 @@ public sealed class MainWindow : Window
                         ToolTip.SetTip(_kaliHashLabel, actual);
                     }
                 }
-                Status("Download verified - waiting to install", 100);
+                if (!kali) { _debianVerified = true; _debianSha256 = actual; }
+                Status(kali ? "Kali image verified - install not yet implemented" :
+                    "Debian ISO verified - automated installation pending", 100);
                 if (actionButton is not null)
                 {
-                    actionButton.Content = kali ? "Kali image downloaded" : "Debian ISO downloaded";
+                    actionButton.Content = kali ? "Kali downloaded" : "Debian downloaded";
+                    actionButton.IsEnabled = false;
                     actionButton.BorderBrush = Paint(Green);
                 }
             }
@@ -886,7 +894,8 @@ public sealed class MainWindow : Window
         finally
         {
             if (kali) _downloadingKali = false; else _downloadingDebian = false;
-            if (actionButton is not null) actionButton.IsEnabled = true;
+            if (actionButton is not null)
+                actionButton.IsEnabled = !(kali ? _kaliVerified : _debianVerified);
         }
     }
 
@@ -921,7 +930,8 @@ public sealed class MainWindow : Window
         var stack = Stack(3);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         var getDebian = Button("Get Debian ISO", () => _ = DownloadLabImageAsync("debian"));
-        getDebian.IsEnabled = hypervisorReady && !_downloadingDebian;
+        getDebian.IsEnabled = hypervisorReady && !_downloadingDebian && !_debianVerified;
+        if (_debianVerified) { getDebian.Content = "Debian downloaded"; getDebian.BorderBrush = Paint(Green); }
         _debianDownloadButton = getDebian;
         actions.Children.Add(getDebian);
         actions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
