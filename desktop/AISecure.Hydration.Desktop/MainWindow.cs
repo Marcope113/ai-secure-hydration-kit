@@ -17,7 +17,6 @@ public sealed class MainWindow : Window
     private readonly ComboBox _distro = new() { ItemsSource = new[] { "Kali Linux", "Parrot Security OS" }, SelectedIndex = 0, MinWidth = 210 };
     private readonly TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
     private readonly Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
-    private bool _showingLessons;
     private string _selected = "kali";
 
     public MainWindow()
@@ -66,7 +65,6 @@ public sealed class MainWindow : Window
 
     private void ShowSetup()
     {
-        _showingLessons = false;
         Header("LAB SETUP  /  STEP 1 OF 2");
         var overview = Stack(8);
         overview.Children.Add(Txt("Linux PrivEsc Techniques", 28, Text, FontWeight.Bold));
@@ -224,7 +222,6 @@ public sealed class MainWindow : Window
     private void ShowLessons()
     {
         if (!_next.IsEnabled) return;
-        _showingLessons = true;
         Header("LEARNING PATH  /  STEP 2 OF 2");
         _page.Children.Add(Txt("Linux PrivEsc Techniques", 28, Text, FontWeight.Bold));
         _page.Children.Add(Txt("Lessons will be unlocked after both virtual machines and their isolated network pass validation.", 14, Muted));
