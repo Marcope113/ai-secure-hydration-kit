@@ -11,7 +11,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$Version='0.3.1-preview'
+$Version='0.3.2-preview'
 $Root=Join-Path $env:LOCALAPPDATA 'AISecureAcademy'
 $Manifest=Join-Path $Root 'hydration-state.json'
 $VMManifest=Join-Path $Root 'hydration-v02.json'
@@ -24,39 +24,49 @@ $IsoBase='https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/'
 function Show-Banner {
  if($Action -eq 'Version'){return}
  Write-Host ''
- Write-Host '  +------------------------------------------------------------+' -ForegroundColor DarkCyan
- Write-Host '  |                                                            |' -ForegroundColor DarkCyan
- Write-Host '  |   A I   S E C U R E   A C A D E M Y                        |' -ForegroundColor Cyan
- Write-Host '  |                                                            |' -ForegroundColor DarkCyan
- Write-Host '  |   H Y D R A T I O N   K I T     // SYSTEM BOOTSTRAP         |' -ForegroundColor Magenta
- Write-Host '  |                                                            |' -ForegroundColor DarkCyan
- Write-Host '  +------------------------------------------------------------+' -ForegroundColor DarkCyan
- Write-Host ("  BUILD  {0}     MODE  {1}" -f $Version,$Action.ToUpperInvariant()) -ForegroundColor DarkGray
- Write-Host '  --------------------------------------------------------------' -ForegroundColor DarkGray
- if(-not [Console]::IsOutputRedirected){
-  foreach($frame in @('[=       ]','[===     ]','[=====   ]','[======= ]','[========]')){
-   Write-Host (([char]13)+"  INITIALIZING  "+$frame) -NoNewline -ForegroundColor Cyan
-   Start-Sleep -Milliseconds 65
-  }
-  Write-Host ''
- }
+ Write-Host '  =============================================================' -ForegroundColor DarkCyan
+ Write-Host '       _    ___   ____  _____ ____ _   _ ____  _____' -ForegroundColor Cyan
+ Write-Host '      / \\  |_ _| / ___|| ____/ ___| | | |  _ \\| ____|' -ForegroundColor Cyan
+ Write-Host '     / _ \\  | |  \\___ \\|  _|| |   | | | | |_) |  _|' -ForegroundColor Cyan
+ Write-Host '    / ___ \\ | |   ___) | |__| |___| |_| |  _ <| |___' -ForegroundColor Cyan
+ Write-Host '   /_/   \\_\\___| |____/|_____\\____|\\___/|_| \\_\\_____|' -ForegroundColor Cyan
  Write-Host ''
+ Write-Host '                 H Y D R A T I O N   K I T' -ForegroundColor Magenta
+ Write-Host '                 Cyber Lab Provisioning' -ForegroundColor DarkGray
+ Write-Host '  =============================================================' -ForegroundColor DarkCyan
+ Write-Host ("  RELEASE  {0}   |   OPERATION  {1}" -f $Version,$Action.ToUpperInvariant()) -ForegroundColor Gray
+ Write-Host ''
+ if(-not [Console]::IsOutputRedirected){
+  foreach($frame in @('[>.........]','[==>.......]','[====>.....]','[======>...]','[=========>]')){
+   Write-Host (([char]13)+'  BOOT SEQUENCE  '+$frame) -NoNewline -ForegroundColor Cyan
+   Start-Sleep -Milliseconds 90
+  }
+  Write-Host (([char]13)+'  BOOT SEQUENCE  [ONLINE]      ') -ForegroundColor Green
+ }
+ Write-Host '  -------------------------------------------------------------' -ForegroundColor DarkGray
+}
+function Show-Line([string]$Label,[string]$Value,[bool]$Good=$true){
+ $color=if($Good){'Green'}else{'Yellow'}
+ Write-Host ('  {0,-25}' -f $Label) -NoNewline -ForegroundColor DarkGray
+ Write-Host ('  '+$Value) -ForegroundColor $color
 }
 function Step([int]$Index,[int]$Total,[string]$Message){
  $percent=[int](($Index-1)*100/$Total)
  Write-Progress -Id 1 -Activity "AI Secure Hydration Kit - $Action" -Status "Step $Index/$Total : $Message" -PercentComplete $percent
- Write-Host ("  [{0:00}/{1:00}]  >>  {2}" -f $Index,$Total,$Message) -ForegroundColor Cyan
+ Write-Host ''
+ Write-Host ("  [{0:00}/{1:00}]  {2}" -f $Index,$Total,$Message.ToUpperInvariant()) -ForegroundColor Cyan
 }
 function Complete-Steps {
  Write-Progress -Id 1 -Activity 'AI Secure Hydration Kit' -Completed
- if($Action -ne 'Version'){
-  Write-Host ''
-  Write-Host '  --------------------------------------------------------------' -ForegroundColor DarkGray
-  Write-Host '  SESSION COMPLETE // AI SECURE ACADEMY' -ForegroundColor Green
-  Write-Host ''
- }
+ if($Action -eq 'Version'){return}
+ Write-Host ''
+ Write-Host '  -------------------------------------------------------------' -ForegroundColor DarkGray
+ if($script:SessionFailed){Write-Host '  [!] OPERATION FAILED - REVIEW ERROR ABOVE' -ForegroundColor Red}
+ elseif($script:SessionCancelled){Write-Host '  [-] OPERATION CANCELLED / NO FURTHER CHANGES' -ForegroundColor Yellow}
+ else{Write-Host '  [+] OPERATION FINISHED - AI SECURE ACADEMY' -ForegroundColor Green}
+ Write-Host ''
 }
-function Confirm([string]$Question){return ((Read-Host "$Question (yes/no)") -eq 'yes')}
+function Confirm([string]$Question){$ok=((Read-Host "$Question (yes/no)") -eq 'yes');if(-not $ok){$script:SessionCancelled=$true};return $ok}
 function Save-Json([string]$Path,$Data){
  New-Item -ItemType Directory -Path (Split-Path $Path) -Force | Out-Null
  $tmp="$Path.tmp"
@@ -96,19 +106,26 @@ function Assert-VM {
  if(($info -join "`n") -notmatch 'VMState="poweroff"'){throw 'Power off the VM first.'}
  return $s
 }
+$script:SessionFailed=$false
+$script:SessionCancelled=$false
 try{
  Show-Banner
  switch($Action){
   'Version' {Write-Output $Version}
   'Check' {
    Step 1 3 'Checking Windows hardware'
-   $p=Check-Host;$p | Format-List
+   $p=Check-Host
+   Show-Line 'Operating system' $p.Windows
+   Show-Line 'Memory' ("$($p.RAM_GB) GB")
+   Show-Line 'Free disk' ("$($p.FreeDisk_GB) GB")
+   Show-Line 'Virtualization' $(if($p.FirmwareVirtualization){'ENABLED'}else{'DISABLED'}) $p.FirmwareVirtualization
    Step 2 3 'Checking existing Academy state'
    foreach($file in @($Manifest,$VMManifest,$MediaManifest)){
-    Write-Host ("{0}: {1}" -f (Split-Path $file -Leaf),$(if(Test-Path $file){'present'}else{'not found'}))
+    $exists=Test-Path -LiteralPath $file
+    Show-Line (Split-Path $file -Leaf) $(if($exists){'FOUND'}else{'NOT FOUND'}) $exists
    }
    Step 3 3 'Checking VirtualBox'
-   if(Test-Path $VBox){& $VBox --version}else{Write-Warning 'VirtualBox not installed.'}
+   if(Test-Path $VBox){$vb=(& $VBox --version);Show-Line 'VirtualBox version' $vb}else{Show-Line 'VirtualBox' 'NOT INSTALLED' $false}
    if(-not $p.MeetsVMRequirements){Write-Warning 'VM minimum requirements not met.'}
    Write-Host 'Diagnostics complete; no changes made.' -ForegroundColor Green
   }
@@ -203,4 +220,4 @@ try{
    Write-Host 'Debian ISO attached. Guest OS is NOT installed.' -ForegroundColor Green
   }
  }
-}finally{Complete-Steps}
+}catch{$script:SessionFailed=$true;Write-Host ('  ERROR: '+$_.Exception.Message) -ForegroundColor Red;throw}finally{Complete-Steps}
