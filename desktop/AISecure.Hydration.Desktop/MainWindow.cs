@@ -647,7 +647,7 @@ public sealed class MainWindow : Window
         _kaliRuntimeLabel = Txt(_kaliRunning ? "● ONLINE" : "● OFFLINE",
             13, _kaliRunning ? Green : Yellow, FontWeight.Bold);
         attackerBody.Children.Add(_kaliRuntimeLabel);
-        attackerBody.Children.Add(VmDetails("IP ADDRESS   " + (_kaliIpVerified ? "10.4.4.10 (verified)" : "10.4.4.10 (not configured)") + "\nOS VERSION   " + (_kaliConfigured ? "Kali Linux (VM registered)" : "Kali Linux (not installed)") + "\nUSER:PASS   kali:kali"));
+        attackerBody.Children.Add(VmDetails("IP ADDRESS   " + (_kaliIpVerified && _kaliDhcpAddress is not null ? _kaliDhcpAddress + " (DHCP verified)" : "DHCP pending") + "\nOS VERSION   " + (_kaliConfigured ? "Kali Linux (VM registered)" : "Kali Linux (not installed)") + "\nUSER:PASS   kali:kali"));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -1260,6 +1260,73 @@ public sealed class MainWindow : Window
         finally { _configuringKaliIp = false; }
     }
 
+    private string? _kaliDhcpAddress;
+    private bool _requestingKaliDhcp;
+    private async Task RequestKaliDhcpAsync(string uuid)
+    {
+        if (_requestingKaliDhcp) return;
+        _requestingKaliDhcp = true;
+        try
+        {
+            var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Oracle", "VirtualBox", "VBoxManage.exe");
+            var info = new ProcessStartInfo(vbox) { UseShellExecute = false,
+                RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+            foreach (var arg in new[] { "showvminfo", uuid, "--machinereadable" }) info.ArgumentList.Add(arg);
+            using var vmInfo = Process.Start(info) ?? throw new InvalidOperationException("VirtualBox VM information unavailable");
+            var infoOut = vmInfo.StandardOutput.ReadToEndAsync();
+            var infoErr = vmInfo.StandardError.ReadToEndAsync();
+            await vmInfo.WaitForExitAsync();
+            var vmConfig = await infoOut;
+            await infoErr;
+            var macMatch = System.Text.RegularExpressions.Regex.Match(vmConfig, @"(?im)^macaddress1=""?([a-f0-9]{12})""?");
+            if (!macMatch.Success) throw new InvalidOperationException("Internal NIC MAC unavailable");
+            var mac = string.Join(":", Enumerable.Range(0, 6)
+                .Select(i => macMatch.Groups[1].Value.Substring(i * 2, 2))).ToLowerInvariant();
+            // Match the VirtualBox internal adapter by MAC, not by a guessed eth0 name.
+            var script = "set -eu; dev=''; for p in /sys/class/net/*/address; do " +
+                "if [ \"$(cat \"$p\")\" = '" + mac + "' ]; then dev=$(basename \"$(dirname \"$p\")\"); break; fi; done; " +
+                "[ -n \"$dev\" ] || exit 42; " +
+                "nmcli connection show aisecurelab-dhcp >/dev/null 2>&1 || " +
+                "nmcli connection add type ethernet ifname \"$dev\" con-name aisecurelab-dhcp; " +
+                "nmcli connection modify aisecurelab-dhcp connection.interface-name \"$dev\" ipv4.method auto ipv4.never-default yes ipv6.method disabled; " +
+                "nmcli connection up aisecurelab-dhcp; ip -4 -o addr show dev \"$dev\"";
+            for (var attempt = 0; attempt < 8; attempt++)
+            {
+                var psi = new ProcessStartInfo(vbox) { UseShellExecute = false,
+                    RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+                foreach (var arg in new[] { "guestcontrol", uuid, "run", "--username", "kali",
+                    "--password", "kali", "--wait-stdout", "--wait-stderr",
+                    "--exe", "/bin/bash", "--", "bash", "-lc",
+                    "echo kali | sudo -S /bin/bash -lc " + "'" + script.Replace("'", "'\\''") + "'" })
+                    psi.ArgumentList.Add(arg);
+                using var proc = Process.Start(psi) ?? throw new InvalidOperationException("Guest control unavailable");
+                var stdout = proc.StandardOutput.ReadToEndAsync();
+                var stderr = proc.StandardError.ReadToEndAsync();
+                using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(25));
+                try { await proc.WaitForExitAsync(timeout.Token); }
+                catch (OperationCanceledException) { try { proc.Kill(true); } catch {} }
+                var output = await stdout;
+                var error = await stderr;
+                var match = System.Text.RegularExpressions.Regex.Match(output,
+                    @"\\binet\\s+(10\\.4\\.4\\.\\d{1,3})/24\\b");
+                if (match.Success && proc.ExitCode == 0)
+                {
+                    _kaliDhcpAddress = match.Groups[1].Value;
+                    _kaliIpVerified = true;
+                    _attackerProgressText.Text = "Kali DHCP verified: " + _kaliDhcpAddress;
+                    ShowSetup();
+                    return;
+                }
+                if (attempt == 7)
+                    throw new InvalidOperationException("Guest DHCP not confirmed. Check Guest Additions and NetworkManager. " + error);
+                await Task.Delay(3000);
+            }
+        }
+        catch (Exception ex) { _attackerProgressText.Text = "DHCP pending: " + ex.Message; }
+        finally { _requestingKaliDhcp = false; }
+    }
+
     private async Task OpenKaliVirtualBoxAsync()
     {
         var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -1300,7 +1367,8 @@ public sealed class MainWindow : Window
             if (info.ExitCode != 0) throw new InvalidOperationException(stateError);
             if (state.Contains("VMState=\"running\"", StringComparison.OrdinalIgnoreCase))
             {
-                _attackerProgressText.Text = "Kali is already running in VirtualBox.";
+                _attackerProgressText.Text = "Kali running - requesting DHCP...";
+                _ = RequestKaliDhcpAsync(uuid);
                 return;
             }
             if (!state.Contains("VMState=\"poweroff\"", StringComparison.OrdinalIgnoreCase) &&
@@ -1309,7 +1377,8 @@ public sealed class MainWindow : Window
             var launch = new ProcessStartInfo(vbox) { UseShellExecute = true };
             foreach (var arg in new[] { "startvm", uuid, "--type", "gui" }) launch.ArgumentList.Add(arg);
             Process.Start(launch);
-            _attackerProgressText.Text = "Opening Kali VM in VirtualBox (guest boot not yet verified).";
+            _attackerProgressText.Text = "Opening Kali - DHCP will be requested after guest boot...";
+            _ = RequestKaliDhcpAsync(uuid);
         }
         catch (Exception ex) { _attackerProgressText.Text = "Cannot open Kali: " + ex.Message; }
     }
