@@ -542,10 +542,10 @@ public sealed class MainWindow : Window
         attackerActions.Children.Add(extractedKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         var installAttacker = Button(_installingAttacker ? "Installing..." : "Install Attacker",
-            () => _ = InstallAttackerAsync());
-        installAttacker.IsEnabled = hypervisorReady && _kaliVerified && !_installingAttacker && !_kaliConfigured;
+            () => { if (_kaliConfigured) _ = OpenKaliVirtualBoxAsync(); else _ = InstallAttackerAsync(); });
+        installAttacker.IsEnabled = hypervisorReady && _kaliVerified && !_installingAttacker;
         if (_kaliConfigured) {
-            installAttacker.Content = "Kali configured";
+            installAttacker.Content = "Open Kali";
             installAttacker.BorderBrush = Paint(Green);
         }
         _installAttackerButton = installAttacker;
@@ -784,6 +784,11 @@ public sealed class MainWindow : Window
         circuitTimer.Tick += (_, _) => {
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
+            if (_kaliConfigured)
+            {
+                attacker.BorderBrush = Paint(circuitOverlay.Bright ? "#8BF6BE" : "#398B6A");
+                installAttacker.BorderBrush = Paint(circuitOverlay.Bright ? "#8BF6BE" : "#398B6A");
+            }
             if (installHypervisorPulse is not null)
                 installHypervisorPulse.BorderBrush = Paint(circuitOverlay.Bright ? "#85EAF1" : "#397389");
         };
@@ -900,6 +905,60 @@ public sealed class MainWindow : Window
             _extractedKaliButton.BorderBrush = Paint(Green);
             ToolTip.SetTip(_extractedKaliButton, folder);
         }
+    }
+
+    private async Task OpenKaliVirtualBoxAsync()
+    {
+        var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Oracle", "VirtualBox", "VBoxManage.exe");
+        if (!File.Exists(vbox)) { _attackerProgressText.Text = "VirtualBox not found."; return; }
+        try
+        {
+            var lookup = new ProcessStartInfo(vbox) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            lookup.ArgumentList.Add("list");
+            lookup.ArgumentList.Add("vms");
+            using var p = Process.Start(lookup) ?? throw new InvalidOperationException("Cannot query VirtualBox.");
+            var outputTask = p.StandardOutput.ReadToEndAsync();
+            var errorTask = p.StandardError.ReadToEndAsync();
+            await p.WaitForExitAsync();
+            var output = await outputTask;
+            var error = await errorTask;
+            if (p.ExitCode != 0) throw new InvalidOperationException(error);
+            var matches = System.Text.RegularExpressions.Regex.Matches(output,
+                @"(?m)^""([^""]*kali-linux[^""]*)""\\s+\\{([a-fA-F0-9-]+)\\}",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (matches.Count != 1)
+                throw new InvalidOperationException("Expected exactly one registered Kali VM; found " + matches.Count);
+            var uuid = matches[0].Groups[2].Value;
+            var start = new ProcessStartInfo(vbox) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            foreach (var arg in new[] { "showvminfo", uuid, "--machinereadable" }) start.ArgumentList.Add(arg);
+            using var info = Process.Start(start) ?? throw new InvalidOperationException("Cannot inspect Kali VM.");
+            var stateTask = info.StandardOutput.ReadToEndAsync();
+            var errTask = info.StandardError.ReadToEndAsync();
+            await info.WaitForExitAsync();
+            var state = await stateTask;
+            var stateError = await errTask;
+            if (info.ExitCode != 0) throw new InvalidOperationException(stateError);
+            if (state.Contains("VMState=\\\"running\\\"", StringComparison.OrdinalIgnoreCase))
+            {
+                _attackerProgressText.Text = "Kali is already running in VirtualBox.";
+                return;
+            }
+            if (!state.Contains("VMState=\\\"poweroff\\\"", StringComparison.OrdinalIgnoreCase) &&
+                !state.Contains("VMState=\\\"aborted\\\"", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Kali is not in a startable state.");
+            var launch = new ProcessStartInfo(vbox) { UseShellExecute = true };
+            foreach (var arg in new[] { "startvm", uuid, "--type", "gui" }) launch.ArgumentList.Add(arg);
+            Process.Start(launch);
+            _attackerProgressText.Text = "Opening Kali VM in VirtualBox (guest boot not yet verified).";
+        }
+        catch (Exception ex) { _attackerProgressText.Text = "Cannot open Kali: " + ex.Message; }
     }
 
     private async Task InstallAttackerAsync()
@@ -1175,8 +1234,8 @@ public sealed class MainWindow : Window
             _attackerProgress.IsIndeterminate = false;
             _installingAttacker = false;
             if (_installAttackerButton is not null) {
-                _installAttackerButton.IsEnabled = !_kaliConfigured;
-                _installAttackerButton.Content = _kaliConfigured ? "Kali configured" : "Install Attacker";
+                _installAttackerButton.IsEnabled = true;
+                _installAttackerButton.Content = _kaliConfigured ? "Open Kali" : "Install Attacker";
                 if (_kaliConfigured) _installAttackerButton.BorderBrush = Paint(Green);
             }
         }
