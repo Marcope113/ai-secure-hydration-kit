@@ -108,7 +108,7 @@ public sealed class MainWindow : Window
         _activity = Txt("Ready. No VM changes made.", 13, Muted);
         _next = new Button { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
         _next.Click += (_, _) => ShowLessons();
-        _distro.SelectionChanged += (_, _) => UpdateAttackerSelection();
+        _distro.SelectionChanged += (_, _) => { UpdateAttackerSelection(); SaveSelection(); };
         Header("LAB SETUP  /  STEP 1 OF 2");
         var overview = Stack(8);
         overview.Children.Add(Txt("Linux PrivEsc Techniques", 28, Text, FontWeight.Bold));
@@ -127,12 +127,9 @@ public sealed class MainWindow : Window
         var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
         Grid.SetColumn(attackerRole, 0);
         attackerHeader.Children.Add(attackerRole);
-        var selectionArea = Stack(6);
-        selectionArea.HorizontalAlignment = HorizontalAlignment.Right;
-        selectionArea.Children.Add(_distro);
-        selectionArea.Children.Add(Button("Save selection", SaveSelection));
-        Grid.SetColumn(selectionArea, 1);
-        attackerHeader.Children.Add(selectionArea);
+        _distro.HorizontalAlignment = HorizontalAlignment.Right;
+        Grid.SetColumn(_distro, 1);
+        attackerHeader.Children.Add(_distro);
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("NOT INSTALLED", 13, Yellow, FontWeight.Bold));
