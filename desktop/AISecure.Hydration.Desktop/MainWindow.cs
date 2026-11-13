@@ -263,6 +263,10 @@ public sealed class MainWindow : Window
         body.Children.Add(Txt(title, 12, Muted, FontWeight.Bold));
         body.Children.Add(Txt(detail, 18, Text, FontWeight.SemiBold));
         body.Children.Add(Txt(status, 13, statusColor, FontWeight.Bold));
+        if (title == "VIRTUALBOX" && installLabel is null)
+        {
+            body.Children.Add(Txt("READY  /  No installation needed", 12, Green, FontWeight.SemiBold));
+        }
         if (installLabel is not null)
         {
             if (title == "VIRTUALBOX")
