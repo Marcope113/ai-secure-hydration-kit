@@ -74,6 +74,36 @@ public sealed class MainWindow : Window
         b.Click += (_, _) => click();
         return b;
     }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MemoryStatus
+    {
+        public uint Length;
+        public uint MemoryLoad;
+        public ulong TotalPhysical;
+        public ulong AvailablePhysical;
+        public ulong TotalPageFile;
+        public ulong AvailablePageFile;
+        public ulong TotalVirtual;
+        public ulong AvailableVirtual;
+        public ulong AvailableExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MemoryStatus status);
+
+    private static double? GetPhysicalRamGiB()
+    {
+        if (!OperatingSystem.IsWindows()) return null;
+        try
+        {
+            var status = new MemoryStatus { Length = (uint)Marshal.SizeOf<MemoryStatus>() };
+            return GlobalMemoryStatusEx(ref status)
+                ? status.TotalPhysical / 1073741824d : null;
+        }
+        catch { return null; }
+    }
+
     private static string ResolveIsoDirectory()
     {
         var configured = Environment.GetEnvironmentVariable("AISECURE_KIT_ROOT");
@@ -142,7 +172,7 @@ public sealed class MainWindow : Window
         var topology = Stack(12);
         topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
         var layers = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("170,*"),
+            ColumnDefinitions = new ColumnDefinitions("*,170"),
             RowDefinitions = new RowDefinitions("Auto,Auto,Auto"),
             ColumnSpacing = 16, RowSpacing = 12
         };
@@ -157,8 +187,8 @@ public sealed class MainWindow : Window
         }
         void AddLayer(Control label, Control content, int row)
         {
-            Grid.SetRow(label, row); Grid.SetColumn(label, 0); layers.Children.Add(label);
-            Grid.SetRow(content, row); Grid.SetColumn(content, 1); layers.Children.Add(content);
+            Grid.SetRow(content, row); Grid.SetColumn(content, 0); layers.Children.Add(content);
+            Grid.SetRow(label, row); Grid.SetColumn(label, 1); layers.Children.Add(label);
         }
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
@@ -257,15 +287,23 @@ public sealed class MainWindow : Window
         hostTitle.TextAlignment = TextAlignment.Center;
         hostTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(hostTitle);
-        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 12 };
+        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 12 };
         var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
             "Windows 11 x64 is required for this Windows preview.", null);
         var diskTile = Requirement("DISK SPACE", $"{free:F1} GB free", diskOk ? "SUPPORTED" : "NOT ENOUGH SPACE", diskOk ? Green : Red,
             "Minimum 35 GB free for the initial target VM. More space is recommended for two VMs.", null);
         Grid.SetColumn(architectureTile, 0); hostSpecs.Children.Add(architectureTile);
         Grid.SetColumn(diskTile, 1); hostSpecs.Children.Add(diskTile);
+        var physicalRam = GetPhysicalRamGiB();
+        var ramOk = physicalRam is >= 8;
+        var ramTile = Requirement("PHYSICAL RAM",
+            physicalRam is null ? "Unavailable" : $"{physicalRam.Value:F1} GB total",
+            physicalRam is null ? "CHECK UNAVAILABLE" : ramOk ? "SUPPORTED" : "8 GB RECOMMENDED",
+            physicalRam is null ? Yellow : ramOk ? Green : Yellow,
+            "8 GB or more is recommended for running Kali and Debian together.", null);
+        Grid.SetColumn(ramTile, 2); hostSpecs.Children.Add(ramTile);
         physicalHost.Children.Add(hostSpecs);
-        var pendingHostChecks = Txt("Physical RAM: verification pending  |  CPU virtualization: verification pending", 12, Muted);
+        var pendingHostChecks = Txt("CPU virtualization: verification pending", 12, Muted);
         pendingHostChecks.TextAlignment = TextAlignment.Center;
         pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(pendingHostChecks);
