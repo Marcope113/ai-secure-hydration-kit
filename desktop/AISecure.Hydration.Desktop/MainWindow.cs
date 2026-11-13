@@ -259,56 +259,37 @@ public sealed class MainWindow : Window
 
     private Control ForkConnector()
     {
-        // Three vertical branches meet one horizontal bus, leading into the hypervisor.
-        var grid = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("*,170,*"),
-            RowDefinitions = new RowDefinitions("12,3,10"),
-            ColumnSpacing = 12,
-            Height = 25,
-            MaxWidth = 780,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        var branches = new List<Border>();
-        for (var column = 0; column < 3; column++)
+        // Compact three-way fork: no full-width horizontal rule or crossing center stem.
+        var fork = new Canvas { Width = 440, Height = 34, HorizontalAlignment = HorizontalAlignment.Center };
+        var lines = new List<Border>();
+        Border Segment(double x, double y, double width, double height)
         {
-            var branch = new Border {
-                Width = 3, Background = Paint("#59788C"),
-                HorizontalAlignment = HorizontalAlignment.Center
+            var segment = new Border {
+                Width = width, Height = height, Background = Paint("#59788C"),
+                CornerRadius = new CornerRadius(1)
             };
-            Grid.SetColumn(branch, column);
-            Grid.SetRow(branch, 0);
-            grid.Children.Add(branch);
-            branches.Add(branch);
+            Canvas.SetLeft(segment, x);
+            Canvas.SetTop(segment, y);
+            fork.Children.Add(segment);
+            lines.Add(segment);
+            return segment;
         }
-        var bus = new Border { Height = 3, Background = Paint("#59788C"), Margin = new Thickness(50, 0) };
-        Grid.SetRow(bus, 1);
-        Grid.SetColumnSpan(bus, 3);
-        grid.Children.Add(bus);
-        var trunk = new Border {
-            Width = 3, Background = Paint("#59788C"),
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        Grid.SetRow(trunk, 2);
-        Grid.SetColumn(trunk, 1);
-        grid.Children.Add(trunk);
-
-        // Muted cyan pulse = UI activity, not proof of network connectivity.
-        // Only verified connections should ever use the green 'online' state.
+        Segment(35, 0, 2, 14);
+        Segment(219, 0, 2, 14);
+        Segment(403, 0, 2, 14);
+        Segment(35, 13, 370, 2);
+        Segment(219, 15, 2, 19);
         var phase = 0;
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
         timer.Tick += (_, _) =>
         {
-            phase = (phase + 1) % 5;
-            for (var i = 0; i < branches.Count; i++)
-            {
-                branches[i].Background = Paint(i == phase % 3 ? "#53DCE8" : "#59788C");
-            }
-            bus.Background = Paint(phase % 2 == 0 ? "#53DCE8" : "#59788C");
-            trunk.Background = Paint(phase % 2 == 1 ? "#53DCE8" : "#59788C");
+            phase = (phase + 1) % lines.Count;
+            for (var i = 0; i < lines.Count; i++)
+                lines[i].Background = Paint(i == phase ? "#53DCE8" : "#59788C");
         };
         _circuitTimer = timer;
         timer.Start();
-        return grid;
+        return fork;
     }
 
     private void Header(string section)
@@ -399,8 +380,6 @@ public sealed class MainWindow : Window
         var attackerControls = Stack(8);
         attackerControls.Children.Add(Button("Get Kali VirtualBox Image", OpenAttackerIsoPage));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
-        attackerControls.Children.Add(_attackerProgressText);
-        attackerControls.Children.Add(_attackerProgress);
         var attackerBody = Stack(7);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
@@ -414,11 +393,19 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
         attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
         attackerBody.Children.Add(attackerControls);
-        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,175"), ColumnSpacing = 10 };
+        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,315"), ColumnSpacing = 10 };
         Grid.SetColumn(attackerBody, 0); attackerLayout.Children.Add(attackerBody);
         var attackerResources = VmResourceControls("attacker");
+        attackerResources.Margin = new Thickness(0, 0, 140, 0);
         Grid.SetColumn(attackerResources, 1); attackerLayout.Children.Add(attackerResources);
-        var attacker = Tile(attackerLayout);
+        var attackerCard = Stack(6);
+        attackerCard.Children.Add(attackerLayout);
+        var attackerProgressArea = Stack(4);
+        attackerProgressArea.Margin = new Thickness(0, 0, 140, 0);
+        attackerProgressArea.Children.Add(_attackerProgressText);
+        attackerProgressArea.Children.Add(_attackerProgress);
+        attackerCard.Children.Add(attackerProgressArea);
+        var attacker = Tile(attackerCard);
         var attackerLayer = WithLayer(attacker, "LAYER 03", "Virtual Machines  /  Attacker");
         Grid.SetColumn(attackerLayer, 0); network.Children.Add(attackerLayer);
         var link = Stack(8);
@@ -457,8 +444,16 @@ public sealed class MainWindow : Window
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,175"), ColumnSpacing = 10 };
         Grid.SetColumn(target, 0); targetLayout.Children.Add(target);
         var targetResources = VmResourceControls("target");
+        targetResources.Margin = new Thickness(0, 0, 140, 0);
         Grid.SetColumn(targetResources, 1); targetLayout.Children.Add(targetResources);
-        var targetTile = Tile(targetLayout);
+        var targetCard = Stack(6);
+        targetCard.Children.Add(targetLayout);
+        var targetProgressArea = Stack(4);
+        targetProgressArea.Margin = new Thickness(0, 0, 140, 0);
+        targetProgressArea.Children.Add(_targetProgressText);
+        targetProgressArea.Children.Add(_targetProgress);
+        targetCard.Children.Add(targetProgressArea);
+        var targetTile = Tile(targetCard);
         var targetLayer = WithLayer(targetTile, "LAYER 03", "Virtual Machines  /  Victim");
         Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
@@ -646,8 +641,6 @@ public sealed class MainWindow : Window
         var stack = Stack(8);
         stack.Children.Add(Button("Get Academy Debian VM", OpenAcademyDebianReleases));
         stack.Children.Add(PendingInstall("Install Target"));
-        stack.Children.Add(_targetProgressText);
-        stack.Children.Add(_targetProgress);
         return stack;
     }
 
