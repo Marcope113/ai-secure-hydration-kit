@@ -788,8 +788,8 @@ public sealed class MainWindow : Window
                 : "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/");
             var listing = await http.GetStringAsync(directory);
             var pattern = kali
-                ? @"kali-linux-[0-9.]+-virtualbox-amd64\\.7z"
-                : @"debian-[0-9.]+-amd64-netinst\\.iso";
+                ? @"kali-linux-[0-9.]+-virtualbox-amd64\.7z"
+                : @"debian-[0-9.]+-amd64-netinst\.iso";
             var filenames = System.Text.RegularExpressions.Regex.Matches(listing, pattern,
                     System.Text.RegularExpressions.RegexOptions.IgnoreCase)
                 .Select(m => m.Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
