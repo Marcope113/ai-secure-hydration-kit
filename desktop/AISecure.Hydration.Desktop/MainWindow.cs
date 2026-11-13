@@ -25,7 +25,7 @@ public sealed class MainWindow : Window
     private readonly List<(Border segment, bool green)> _pulseSegments = new();
     private bool _pulseBright;
     private readonly string _isoRoot = ResolveIsoDirectory();
-    private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
+    private TextBlock _attackerProgressText = Txt("Waiting to download", 11, Muted);
     private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
     private ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
     private ProgressBar _targetProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
@@ -459,11 +459,8 @@ public sealed class MainWindow : Window
         networkName.TextAlignment = TextAlignment.Center;
         var networkType = Txt("INTERNAL NETWORK", 10, Muted);
         networkType.TextAlignment = TextAlignment.Center;
-        var networkArrow = Txt("←────→", 16, Accent, FontWeight.Bold);
+        var networkArrow = Txt("<------>", 20, Accent, FontWeight.Bold);
         networkArrow.TextAlignment = TextAlignment.Center;
-        var networkIcon = Txt("◎", 23, Accent, FontWeight.Bold);
-        networkIcon.TextAlignment = TextAlignment.Center;
-        link.Children.Add(networkIcon);
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
