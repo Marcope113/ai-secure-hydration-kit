@@ -578,60 +578,69 @@ public sealed class MainWindow : Window
             : null;
         var localKaliArchiveExists = Directory.Exists(_isoRoot) &&
             Directory.GetFiles(_isoRoot, "kali-linux-*-virtualbox-amd64.7z").Length > 0;
-        var deployArea = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 13 };
+        var deployArea = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
         deployArea.VerticalAlignment = VerticalAlignment.Center;
         var deployButton = Button(_deployingKali ? "Deploying..." : "Deploy Kali Linux",
             () => _ = DeployKaliAsync());
         deployButton.IsEnabled = hypervisorReady && !_deployingKali;
         _deployKaliButton = deployButton;
         deployArea.Children.Add(deployButton);
+        var lead = new Border { Width = 15, Height = 2, Background = Paint("#4DA5B5"),
+            VerticalAlignment = VerticalAlignment.Center };
+        deployArea.Children.Add(lead);
         var pipeline = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("90,28,90,28,90"),
-            RowDefinitions = new RowDefinitions("Auto,Auto"),
-            ColumnSpacing = 0, RowSpacing = 3
+            ColumnDefinitions = new ColumnDefinitions("61,18,61,18,61"),
+            RowDefinitions = new RowDefinitions("32,Auto"),
+            RowSpacing = 3
         };
-        Button Stage(int column, string label, bool completed, bool available, Action click, string hint)
+        Border Stage(int column, string label, bool completed, bool available, Action click, string hint)
         {
-            var dot = Button("●", click);
-            dot.FontSize = 20;
-            dot.Padding = new Thickness(4, 0);
-            dot.MinWidth = 36;
-            dot.HorizontalAlignment = HorizontalAlignment.Center;
-            dot.BorderBrush = Paint(completed ? Green : "#486176");
-            dot.Foreground = Paint(completed ? Green : Muted);
-            dot.IsEnabled = available;
-            ToolTip.SetTip(dot, hint);
-            Grid.SetColumn(dot, column);
-            Grid.SetRow(dot, 0);
-            pipeline.Children.Add(dot);
-            var caption = Txt(label, 11, completed ? Green : Muted, FontWeight.SemiBold);
+            var mark = Txt(completed ? "✓" : "", 13, completed ? "#102A25" : Muted, FontWeight.Bold);
+            mark.HorizontalAlignment = HorizontalAlignment.Center;
+            mark.VerticalAlignment = VerticalAlignment.Center;
+            var circle = new Border {
+                Width = 25, Height = 25, CornerRadius = new CornerRadius(13),
+                Background = Paint(completed ? Green : "#263D50"),
+                BorderBrush = Paint(completed ? Green : "#668196"),
+                BorderThickness = new Thickness(2),
+                Child = mark,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Cursor = new Avalonia.Input.Cursor(available ?
+                    Avalonia.Input.StandardCursorType.Hand : Avalonia.Input.StandardCursorType.Arrow)
+            };
+            if (available) circle.PointerPressed += (_, _) => click();
+            ToolTip.SetTip(circle, hint);
+            Grid.SetColumn(circle, column);
+            pipeline.Children.Add(circle);
+            var caption = Txt(label, 10, completed ? Green : Muted, FontWeight.SemiBold);
             caption.TextAlignment = TextAlignment.Center;
             Grid.SetColumn(caption, column);
             Grid.SetRow(caption, 1);
             pipeline.Children.Add(caption);
-            return dot;
+            return circle;
         }
-        var getKali = Stage(0, "Download", _kaliVerified, localKaliArchiveExists || _kaliVerified,
+        var downloadStage = Stage(0, "Download", _kaliVerified, localKaliArchiveExists || _kaliVerified,
             OpenIsoFolder, "Open downloaded Kali image folder");
-        _kaliDownloadButton = getKali;
-        var extractedKali = Stage(2, "Extracted",
+        var extractedStage = Stage(2, "Extracted",
             _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder),
             _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder),
             () => { if (_installedKaliFolder is not null) OpenStoragePath(_installedKaliFolder); },
             _installedKaliFolder ?? "Extraction pending");
-        _extractedKaliButton = extractedKali;
-        var installAttacker = Stage(4, "Open Kali", _kaliConfigured, _kaliConfigured,
-            () => _ = OpenKaliVirtualBoxAsync(), "Open registered Kali VM in VirtualBox");
-        _installAttackerButton = installAttacker;
+        var openStage = Stage(4, "Open Kali", _kaliConfigured, _kaliConfigured,
+            () => _ = OpenKaliVirtualBoxAsync(), "Start Kali in VirtualBox");
         foreach (var column in new[] { 1, 3 })
         {
-            var connector = Txt("━━━━", 12, Accent);
-            connector.TextAlignment = TextAlignment.Center;
-            connector.VerticalAlignment = VerticalAlignment.Center;
+            var connector = new Border { Height = 2, Background = Paint("#4DA5B5"),
+                VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(connector, column);
             pipeline.Children.Add(connector);
         }
         deployArea.Children.Add(pipeline);
+        // These legacy controls are not used by the new milestone visualization.
+        _kaliDownloadButton = null;
+        _extractedKaliButton = null;
+        _installAttackerButton = null;
         attackerControls.Children.Add(deployArea);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
