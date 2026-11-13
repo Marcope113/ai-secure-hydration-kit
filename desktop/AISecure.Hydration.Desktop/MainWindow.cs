@@ -173,26 +173,28 @@ public sealed class MainWindow : Window
         var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
             "Oracle", "VirtualBox", "VBoxManage.exe");
         var hypervisorReady = File.Exists(hypervisorPath);
-        var foundation = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16 };
-        var foundationInfo = Stack(5);
-        var hypervisorTitle = Txt("HYPERVISOR  /  ORACLE VIRTUALBOX", 14, Accent, FontWeight.Bold);
-        hypervisorTitle.TextAlignment = TextAlignment.Center;
-        foundationInfo.Children.Add(hypervisorTitle);
-        foundationInfo.Children.Add(Txt("Virtualization layer hosting Attacker + Victim VMs", 13, Muted));
-        foundationInfo.Children.Add(Txt(hypervisorReady ? "SUPPORTED  -  INSTALLED" : "NOT INSTALLED  -  REQUIRED FIRST",
-            13, hypervisorReady ? Green : Red, FontWeight.Bold));
-        Grid.SetColumn(foundationInfo, 0);
-        foundation.Children.Add(foundationInfo);
+        var foundationInfo = Stack(7);
+        foundationInfo.HorizontalAlignment = HorizontalAlignment.Stretch;
+        foreach (var line in new[] {
+            Txt("HYPERVISOR  /  ORACLE VIRTUALBOX", 16, Accent, FontWeight.Bold),
+            Txt("Virtualization layer hosting Attacker + Victim VMs", 13, Muted),
+            Txt(hypervisorReady ? "SUPPORTED  -  INSTALLED" : "NOT INSTALLED  -  REQUIRED FIRST",
+                13, hypervisorReady ? Green : Red, FontWeight.Bold)
+        })
+        {
+            line.TextAlignment = TextAlignment.Center;
+            line.HorizontalAlignment = HorizontalAlignment.Stretch;
+            foundationInfo.Children.Add(line);
+        }
         if (!hypervisorReady)
         {
             var installHypervisor = Button("Install VirtualBox", () => _ = InstallVirtualBoxAsync());
-            installHypervisor.VerticalAlignment = VerticalAlignment.Center;
-            Grid.SetColumn(installHypervisor, 1);
-            foundation.Children.Add(installHypervisor);
+            installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
+            foundationInfo.Children.Add(installHypervisor);
         }
-        _page.Children.Add(Tile(foundation, "#122432"));
+        _page.Children.Add(Tile(foundationInfo, "#122432"));
         // Physical host is the bottom layer of the topology, beneath VirtualBox.
-        Section("PHYSICAL HOST  /  SYSTEM REQUIREMENTS");
+        // Host hardware and OS are the physical foundation of the VM stack.
         var build = Environment.OSVersion.Version.Build;
         var windows = OperatingSystem.IsWindows();
         var architecture = RuntimeInformation.OSArchitecture;
@@ -204,6 +206,7 @@ public sealed class MainWindow : Window
         var hostTitle = Txt("HOST MACHINE  /  " +
             (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription), 15, Accent, FontWeight.Bold);
         hostTitle.TextAlignment = TextAlignment.Center;
+        hostTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(hostTitle);
         var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 12 };
         var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
@@ -213,7 +216,10 @@ public sealed class MainWindow : Window
         Grid.SetColumn(architectureTile, 0); hostSpecs.Children.Add(architectureTile);
         Grid.SetColumn(diskTile, 1); hostSpecs.Children.Add(diskTile);
         physicalHost.Children.Add(hostSpecs);
-        physicalHost.Children.Add(Txt("Physical RAM: verification pending  |  CPU virtualization: verification pending", 12, Muted));
+        var pendingHostChecks = Txt("Physical RAM: verification pending  |  CPU virtualization: verification pending", 12, Muted);
+        pendingHostChecks.TextAlignment = TextAlignment.Center;
+        pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
+        physicalHost.Children.Add(pendingHostChecks);
         _page.Children.Add(Tile(physicalHost, "#101E2C"));
 
         _page.Children.Add(Txt("SETUP ORDER   1. VirtualBox  >  2. Attacker / Target VMs  >  3. Isolated network validation",
@@ -282,9 +288,16 @@ public sealed class MainWindow : Window
     private Border Requirement(string title, string detail, string status, string statusColor, string manual, string? installLabel)
     {
         var body = Stack(8);
-        body.Children.Add(Txt(title, 12, Muted, FontWeight.Bold));
-        body.Children.Add(Txt(detail, 18, Text, FontWeight.SemiBold));
-        body.Children.Add(Txt(status, 13, statusColor, FontWeight.Bold));
+        foreach (var line in new[] {
+            Txt(title, 12, Muted, FontWeight.Bold),
+            Txt(detail, 18, Text, FontWeight.SemiBold),
+            Txt(status, 13, statusColor, FontWeight.Bold)
+        })
+        {
+            line.TextAlignment = TextAlignment.Center;
+            line.HorizontalAlignment = HorizontalAlignment.Stretch;
+            body.Children.Add(line);
+        }
         if (title == "VIRTUALBOX" && installLabel is null)
         {
             body.Children.Add(Txt("READY  /  No installation needed", 12, Green, FontWeight.SemiBold));
