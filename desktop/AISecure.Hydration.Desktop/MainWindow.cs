@@ -32,10 +32,13 @@ public sealed class MainWindow : Window
         Background = new SolidColorBrush(Color.Parse("#0B1520"));
 
         var main = new StackPanel { Spacing = 18, Margin = new Thickness(28) };
-        main.Children.Add(Label("// AI SECURE A C A D E M Y", 18, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("// AI SECURE  A C A D E M Y", 21, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("LEARN  /  PRACTICE  /  VALIDATE", 12, "#A7B8CB"));
         main.Children.Add(Label("HYDRATION KIT: Linux PrivEsc Techniques", 24, "#F1F5F9", FontWeight.SemiBold));
         main.Children.Add(Label("Windows desktop preview  |  " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), 13, "#9FB0BF"));
         main.Children.Add(new Border { Height = 1, Background = new SolidColorBrush(Color.Parse("#304557")) });
+        main.Children.Add(Label("LAB DASHBOARD", 18, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("Two virtual machines. One guided learning experience.", 13, "#A7B8CB"));
         main.Children.Add(Label("HOST ENVIRONMENT", 15, "#55DCE8", FontWeight.Bold));
         main.Children.Add(_host);
         main.Children.Add(Label("TARGET  |  Debian 13", 15, "#C7AAFF", FontWeight.Bold));
@@ -52,6 +55,13 @@ public sealed class MainWindow : Window
         buttons.Children.Add(refresh);
         buttons.Children.Add(save);
         main.Children.Add(buttons);
+        main.Children.Add(Label("LEARNING PATH  /  COMING SOON", 15, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("01  Linux Fundamentals   |   Users, permissions and processes", 14, "#F2F6FC"));
+        main.Children.Add(Label("02  Sudo Misconfigurations   |   Enumeration and detection", 14, "#F2F6FC"));
+        main.Children.Add(Label("03  SUID Exploitation   |   Privileged binaries", 14, "#F2F6FC"));
+        main.Children.Add(Label("04  Cron Jobs   |   Scheduled tasks", 14, "#F2F6FC"));
+        main.Children.Add(Label("05  Linux Capabilities   |   Capability abuse", 14, "#F2F6FC"));
+        main.Children.Add(Label("Lessons are placeholders; offline content and validation are not enabled.", 12, "#E8B65B"));
         main.Children.Add(Label("ACTIVITY", 15, "#55DCE8", FontWeight.Bold));
         main.Children.Add(_status);
         main.Children.Add(Label("Preview: no VM creation, OS installation or downloads are enabled.", 12, "#E8B65B"));
@@ -70,7 +80,8 @@ public sealed class MainWindow : Window
             var freeGb = drive.AvailableFreeSpace / 1024d / 1024 / 1024;
             var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "Oracle", "VirtualBox", "VBoxManage.exe");
-            _host.Text = $"OS: {RuntimeInformation.OSDescription}\nArchitecture: {RuntimeInformation.OSArchitecture}\nAvailable disk: {freeGb:F1} GB\nVirtualBox: {(File.Exists(vbox) ? "Detected" : "Not detected")}\nMemory: Not checked in this preview";
+            var osName = OperatingSystem.IsWindows() && Environment.OSVersion.Version.Build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription;
+            _host.Text = $"OS: {osName}\nArchitecture: {RuntimeInformation.OSArchitecture}\nAvailable disk: {freeGb:F1} GB\nVirtualBox: {(File.Exists(vbox) ? "Detected" : "Not detected")}\nMemory: Not checked in this preview";
             _target.Text = $"VM manifest: {Exists("hydration-v02.json")}\nDebian media manifest: {Exists("debian-media.json")}\nGuest installation: Not verified";
             var selected = ReadSelection();
             _attacker.Text = selected is null ? "Not selected / not installed" : $"Saved selection: {selected} (installation pending)";
