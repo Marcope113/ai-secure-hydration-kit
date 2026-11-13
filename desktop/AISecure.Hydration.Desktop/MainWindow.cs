@@ -178,10 +178,10 @@ public sealed class MainWindow : Window
         var panel = Stack(8);
         panel.Width = 205;
         panel.Children.Add(Txt("VM RESOURCES", 11, Accent, FontWeight.Bold));
-        var hostRam = GetPhysicalRamGiB();
-        var maxRam = hostRam is null ? 16 : Math.Clamp((int)Math.Floor(hostRam.Value) - 4, 2, 64);
-        var cpuMax = Math.Clamp(Environment.ProcessorCount, 1, 16);
-        var diskMax = 120;
+        // Course lab limits: deliberately small, predictable VM allocations.
+        const int maxRam = 8;
+        const int cpuMax = 4;
+        const int diskMax = 50;
 
         void AddResource(string name, string key, int minimum, int maximum, int fallback, string unit)
         {
