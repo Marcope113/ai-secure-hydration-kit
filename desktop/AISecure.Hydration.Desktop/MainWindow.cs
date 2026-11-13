@@ -387,11 +387,30 @@ public sealed class MainWindow : Window
         return Tile(body);
     }
 
+    private Window ShowVirtualBoxProgress(string action)
+    {
+        var progressWindow = new Window {
+            Title = "VirtualBox - " + action, Width = 490, Height = 205,
+            Background = Paint("#152332"), WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+        var content = Stack(14);
+        content.Margin = new Thickness(24);
+        content.Children.Add(Txt(action + " VirtualBox", 19, Text, FontWeight.Bold));
+        content.Children.Add(Txt("Preparing winget / waiting for Windows installer. This can take several minutes.", 13, Muted));
+        content.Children.Add(new ProgressBar { IsIndeterminate = true, Height = 10 });
+        content.Children.Add(Txt("Working... Please wait for completion or a Windows permission prompt.", 12, Accent));
+        progressWindow.Content = content;
+        progressWindow.Show(this);
+        return progressWindow;
+    }
+
     private async Task UninstallVirtualBoxAsync()
     {
         if (_removingVirtualBox || _installingVirtualBox) return;
         var vboxManage = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
             "Oracle", "VirtualBox", "VBoxManage.exe");
+        Window? progressWindow = null;
         try
         {
             if (!File.Exists(vboxManage))
@@ -436,6 +455,7 @@ public sealed class MainWindow : Window
 
             _removingVirtualBox = true;
             _activity.Text = "Uninstalling VirtualBox using winget...";
+            progressWindow = ShowVirtualBoxProgress("Uninstalling");
             var start = new ProcessStartInfo("winget.exe") {
                 UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardOutput = true, RedirectStandardError = true
@@ -464,6 +484,7 @@ public sealed class MainWindow : Window
         }
         finally
         {
+            progressWindow?.Close();
             _removingVirtualBox = false;
             ShowSetup();
         }
@@ -489,6 +510,7 @@ public sealed class MainWindow : Window
 
         _installingVirtualBox = true;
         _activity.Text = "Installing VirtualBox via winget. Please wait...";
+        var progressWindow = ShowVirtualBoxProgress("Installing");
         try
         {
             var start = new ProcessStartInfo("winget.exe") {
@@ -522,6 +544,7 @@ public sealed class MainWindow : Window
         }
         finally
         {
+            progressWindow.Close();
             _installingVirtualBox = false;
             // Refresh the requirement tiles after the process finishes.
             ShowSetup();
