@@ -18,6 +18,8 @@ public sealed class MainWindow : Window
     private readonly TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
     private readonly Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
     private string _selected = "kali";
+    private readonly TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
+    private readonly TextBlock _attackerVersion = Txt("OS VERSION   Kali Linux (not verified)", 13, Muted);
 
     public MainWindow()
     {
@@ -26,7 +28,18 @@ public sealed class MainWindow : Window
         Background = Paint("#0B1520");
         Content = new ScrollViewer { Content = _page };
         _next.Click += (_, _) => ShowLessons();
+        var saved = ReadSelection();
+        _selected = saved == "parrot" ? "parrot" : "kali";
+        _distro.SelectedIndex = _selected == "parrot" ? 1 : 0;
+        _distro.SelectionChanged += (_, _) => UpdateAttackerSelection();
         ShowSetup();
+    }
+
+    private void UpdateAttackerSelection()
+    {
+        _selected = _distro.SelectedIndex == 1 ? "parrot" : "kali";
+        _attackerOs.Text = _selected == "parrot" ? "Parrot Security OS" : "Kali Linux";
+        _attackerVersion.Text = "OS VERSION   " + (_selected == "parrot" ? "Parrot Security OS" : "Kali Linux") + " (not verified)";
     }
 
     private static IBrush Paint(string hex) => new SolidColorBrush(Color.Parse(hex));
@@ -75,6 +88,7 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB TOPOLOGY");
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
+        attackerControls.Children.Add(_attackerVersion);
         attackerControls.Children.Add(_distro);
         attackerControls.Children.Add(Button("Save selection", SaveSelection));
         var attacker = Machine("[>_]", "ATTACKER", _selected == "parrot" ? "Parrot Security OS" : "Kali Linux",
@@ -103,7 +117,7 @@ public sealed class MainWindow : Window
             "IP ADDRESS   Not assigned\nOS VERSION   Not verified\nMEDIA   Debian 13.7.0 ISO");
         Grid.SetColumn(target, 2); network.Children.Add(target);
         _page.Children.Add(network);
-        _page.Children.Add(Txt("The topology shows planned isolated connectivity. IP addresses and guest versions will be displayed only after verification.", 12, Muted));
+        _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24), not yet configured or verified in either guest.", 12, Muted));
 
         Section("TECHNIQUES COVERED");
         var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
@@ -224,6 +238,7 @@ public sealed class MainWindow : Window
             File.WriteAllText(tmp, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(tmp, file, true);
             _selected = selection;
+            UpdateAttackerSelection();
             _activity.Text = "Attacker selection saved. No VM changes made.";
             ShowSetup();
         }
