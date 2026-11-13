@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -25,6 +26,8 @@ public sealed class MainWindow : Window
     private bool _downloadingDebian;
     private double _kaliPercent;
     private double _debianPercent;
+    private string? _kaliSha256;
+    private TextBlock? _kaliHashLabel;
     private string _kaliStatus = "Waiting to download";
     private string _debianStatus = "Waiting to download";
     private DispatcherTimer? _circuitTimer;
@@ -464,6 +467,9 @@ public sealed class MainWindow : Window
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         attackerActions.Children.Add(PendingInstall("Install Attacker"));
         attackerControls.Children.Add(attackerActions);
+        _kaliHashLabel = Txt(_kaliSha256 is null ? "" : "SHA-256 (local): " + _kaliSha256[..16] + "…", 11, Muted);
+        if (_kaliSha256 is not null) ToolTip.SetTip(_kaliHashLabel, _kaliSha256);
+        attackerControls.Children.Add(_kaliHashLabel);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
@@ -821,6 +827,18 @@ public sealed class MainWindow : Window
             }
             // A complete transfer is not the same as cryptographic validation.
             File.Move(temporary, destination, true);
+            if (kali)
+            {
+                Status("Calculating SHA-256...", 100);
+                await using var downloaded = File.OpenRead(destination);
+                var digest = await SHA256.HashDataAsync(downloaded);
+                _kaliSha256 = Convert.ToHexString(digest).ToLowerInvariant();
+                if (_kaliHashLabel is not null)
+                {
+                    _kaliHashLabel.Text = "SHA-256 (local): " + _kaliSha256[..16] + "…";
+                    ToolTip.SetTip(_kaliHashLabel, _kaliSha256);
+                }
+            }
             Status(kali ? "Downloaded - checksum verification pending" : "Debian ISO downloaded - checksum verification pending", 100);
         }
         catch (Exception ex)
