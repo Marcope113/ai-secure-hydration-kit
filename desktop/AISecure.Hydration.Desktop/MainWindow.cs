@@ -267,7 +267,7 @@ public sealed class MainWindow : Window
         if (role == "attacker")
         {
             var diskHeading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-            diskHeading.Children.Add(Txt("DISK", 11, Muted, FontWeight.SemiBold));
+            diskHeading.Children.Add(Txt("DISK (DEFAULT KALI IMAGE)", 10, Muted, FontWeight.SemiBold));
             var diskValue = Txt("80 GB", 11, Accent, FontWeight.Bold);
             Grid.SetColumn(diskValue, 1);
             diskHeading.Children.Add(diskValue);
@@ -278,7 +278,6 @@ public sealed class MainWindow : Window
                 Foreground = Paint(Accent), Background = Paint("#294153"),
                 HorizontalAlignment = HorizontalAlignment.Stretch
             });
-            panel.Children.Add(Txt("Default Kali image", 10, Muted));
         }
         else AddResource("DISK", "disk", 20, diskMax, 20, "GB");
         AddResource("MEMORY", "memory", 1, maxRam, 2, "GB");
@@ -1458,7 +1457,10 @@ public sealed class MainWindow : Window
         finally
         {
             if (kali) _downloadingKali = false; else _downloadingDebian = false;
-            if (actionButton is not null) actionButton.IsEnabled = true;
+            if (actionButton is not null)
+                actionButton.IsEnabled = File.Exists(Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "Oracle", "VirtualBox", "VBoxManage.exe"));
             if (kali && _installAttackerButton is not null)
                 _installAttackerButton.IsEnabled = _kaliVerified && !_installingAttacker;
         }
