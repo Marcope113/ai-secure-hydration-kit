@@ -781,26 +781,22 @@ public sealed class MainWindow : Window
             using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("AISecureAcademy-HydrationKit/1.0");
             Uri source;
-            if (kali)
-            {
-                // Discover the official VirtualBox archive; Kali versions change regularly.
-                var html = await http.GetStringAsync("https://www.kali.org/get-kali/");
-                var links = System.Text.RegularExpressions.Regex.Matches(html,
-                    @"https?[^""'<>\\s]+?virtualbox[^""'<>\\s]*?\\.7z", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                var urls = links.Select(m => System.Net.WebUtility.HtmlDecode(m.Value.Replace("&amp;", "&")))
-                    .Select(u => Uri.TryCreate(u, UriKind.Absolute, out var parsed) ? parsed : null)
-                    .Where(u => u is not null && u.Scheme == Uri.UriSchemeHttps &&
-                        (u.Host == "cdimage.kali.org" || u.Host.EndsWith(".kali.org", StringComparison.OrdinalIgnoreCase)))
-                    .ToList();
-                source = urls.FirstOrDefault() ?? throw new InvalidOperationException(
-                    "Official Kali VirtualBox download link not found. No untrusted mirror was used.");
-            }
-            else
-            {
-                // Temporary bootstrap image: official stock Debian netinst ISO,
-                // NOT the future Academy vulnerable VM. Installation remains gated.
-                source = new Uri("https://cdimage.debian.org/cdimage/archive/13.7.0/amd64/iso-cd/debian-13.7.0-amd64-netinst.iso");
-            }
+            // Resolve the image filename from the official release directory,
+            // rather than scraping a marketing page or pinning an old release.
+            var directory = new Uri(kali
+                ? "https://cdimage.kali.org/current/"
+                : "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/");
+            var listing = await http.GetStringAsync(directory);
+            var pattern = kali
+                ? @"kali-linux-[0-9.]+-virtualbox-amd64\\.7z"
+                : @"debian-[0-9.]+-amd64-netinst\\.iso";
+            var filenames = System.Text.RegularExpressions.Regex.Matches(listing, pattern,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                .Select(m => m.Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (filenames.Count == 0)
+                throw new InvalidOperationException("Official release image not found in " + directory);
+            var selected = filenames.OrderByDescending(n => n, StringComparer.OrdinalIgnoreCase).First();
+            source = new Uri(directory, selected);
             var filename = Uri.UnescapeDataString(source.Segments.Last());
             if (filename.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
                 throw new InvalidOperationException("Invalid download filename.");
