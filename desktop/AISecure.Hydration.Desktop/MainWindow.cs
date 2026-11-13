@@ -597,11 +597,11 @@ public sealed class MainWindow : Window
             ColumnDefinitions = new ColumnDefinitions("82,12,65,12,65,12,65"),
             RowDefinitions = new RowDefinitions("42,Auto"), RowSpacing = 4
         };
-        var deployButton = Button("➜", () => _ = DeployKaliAsync());
+        var deployButton = Button("›", () => _ = DeployKaliAsync());
         deployButton.Width = 34;
         deployButton.Height = 34;
         deployButton.Padding = new Thickness(0);
-        deployButton.FontSize = 19;
+        deployButton.FontSize = 29;
         deployButton.CornerRadius = new CornerRadius(18);
         deployButton.BorderBrush = Paint("#45C8E8");
         deployButton.Foreground = Paint("#45C8E8");
@@ -746,11 +746,6 @@ public sealed class MainWindow : Window
         _networkStatusLabel = networkState;
         networkState.TextAlignment = TextAlignment.Center;
         link.Children.Add(networkState);
-        var configureNetwork = Button("Configure", () =>
-            _activity.Text = "Network configuration is not implemented yet. No changes made.");
-        configureNetwork.IsEnabled = hypervisorReady;
-        configureNetwork.HorizontalAlignment = HorizontalAlignment.Center;
-        link.Children.Add(configureNetwork);
         var linkTile = new Border {
             Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
             BorderBrush = Paint(_kaliIpVerified && _dhcpConfigured ? Green : Yellow), BorderThickness = new Thickness(2),
@@ -1544,7 +1539,7 @@ public sealed class MainWindow : Window
         finally
         {
             _deployingKali = false;
-            if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = true; _deployKaliButton.Content = "➜"; }
+            if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = true; _deployKaliButton.Content = "›"; }
         }
     }
 
@@ -2005,11 +2000,11 @@ public sealed class MainWindow : Window
             ColumnDefinitions = new ColumnDefinitions("75,9,54,9,54,9,68"),
             RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
         };
-        var deploy = Button("➜", () => _ = DeployDebianAsync());
+        var deploy = Button("›", () => _ = DeployDebianAsync());
         deploy.Width = 34;
         deploy.Height = 34;
         deploy.Padding = new Thickness(0);
-        deploy.FontSize = 19;
+        deploy.FontSize = 29;
         deploy.CornerRadius = new CornerRadius(18);
         deploy.BorderBrush = Paint("#45C8E8");
         deploy.Foreground = Paint("#45C8E8");
@@ -2085,7 +2080,7 @@ public sealed class MainWindow : Window
             _deployingDebian = false;
             if (_deployDebianButton is not null) {
                 _deployDebianButton.IsEnabled = true;
-                _deployDebianButton.Content = "➜";
+                _deployDebianButton.Content = "›";
             }
         }
     }
