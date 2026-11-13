@@ -1938,11 +1938,11 @@ public sealed class MainWindow : Window
         _deployDebianButton = deploy;
         actions.Children.Add(deploy);
         actions.Children.Add(new Border {
-            Width = 15, Height = 2, Background = Paint("#4DA5B5"),
+            Width = 9, Height = 2, Background = Paint("#4DA5B5"),
             VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 19, 0, 0)
         });
         var pipeline = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("61,18,61,18,61"),
+            ColumnDefinitions = new ColumnDefinitions("53,12,53,12,65"),
             RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
         };
         var bus = new Border { Height = 2, Background = Paint("#4DA5B5"),
@@ -1969,7 +1969,7 @@ public sealed class MainWindow : Window
             ToolTip.SetTip(circle, hint);
             Grid.SetColumn(circle, col);
             pipeline.Children.Add(circle);
-            var caption = Txt(name, 10, completed ? Green : Muted, FontWeight.SemiBold);
+            var caption = Txt(name, 9, completed ? Green : Muted, FontWeight.SemiBold);
             caption.TextAlignment = TextAlignment.Center;
             Grid.SetColumn(caption, col);
             Grid.SetRow(caption, 1);
