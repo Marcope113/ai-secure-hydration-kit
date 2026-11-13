@@ -242,7 +242,7 @@ public sealed class MainWindow : Window
 
     private Control VmResourceControls(string role)
     {
-        var panel = Stack(1);
+        var panel = Stack(0);
         panel.Width = 195;
         panel.Children.Add(Txt("VM RESOURCES", 11, Accent, FontWeight.Bold));
         // Course lab limits: deliberately small, predictable VM allocations.
@@ -273,6 +273,7 @@ public sealed class MainWindow : Window
                 value.Text = $"{selected} {unit}".TrimEnd();
                 SaveVmResource(role, key, selected);
             };
+            slider.Margin = new Thickness(0, -5, 0, -2);
             panel.Children.Add(slider);
         }
 
@@ -287,6 +288,7 @@ public sealed class MainWindow : Window
             panel.Children.Add(new Slider {
                 Minimum = 0, Maximum = 80, Value = 80,
                 IsEnabled = false,
+                Margin = new Thickness(0, -5, 0, -2),
                 Foreground = Paint(Accent), Background = Paint("#294153"),
                 HorizontalAlignment = HorizontalAlignment.Stretch
             });
