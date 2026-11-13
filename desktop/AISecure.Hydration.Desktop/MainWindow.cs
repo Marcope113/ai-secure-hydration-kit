@@ -598,6 +598,7 @@ public sealed class MainWindow : Window
             RowDefinitions = new RowDefinitions("42,Auto"), RowSpacing = 4
         };
         var deployButton = Button("›", () => _ = DeployKaliAsync());
+        deployButton.Content = DeployChevron();
         deployButton.Width = 34;
         deployButton.Height = 34;
         deployButton.Padding = new Thickness(0);
@@ -1539,7 +1540,7 @@ public sealed class MainWindow : Window
         finally
         {
             _deployingKali = false;
-            if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = true; _deployKaliButton.Content = "›"; }
+            if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = true; _deployKaliButton.Content = DeployChevron(); }
         }
     }
 
@@ -1993,6 +1994,19 @@ public sealed class MainWindow : Window
         }
     }
 
+    private static Avalonia.Controls.Shapes.Path DeployChevron() => new()
+    {
+        Data = Geometry.Parse("M 1 1 L 11 11 L 1 21"),
+        Stroke = Paint("#45C8E8"),
+        StrokeThickness = 3.2,
+        StrokeLineCap = PenLineCap.Round,
+        StrokeLineJoin = PenLineJoin.Round,
+        Width = 13,
+        Height = 22,
+        HorizontalAlignment = HorizontalAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Center
+    };
+
     private Control TargetControls(bool hypervisorReady)
     {
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
@@ -2001,6 +2015,7 @@ public sealed class MainWindow : Window
             RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
         };
         var deploy = Button("›", () => _ = DeployDebianAsync());
+        deploy.Content = DeployChevron();
         deploy.Width = 34;
         deploy.Height = 34;
         deploy.Padding = new Thickness(0);
@@ -2080,7 +2095,7 @@ public sealed class MainWindow : Window
             _deployingDebian = false;
             if (_deployDebianButton is not null) {
                 _deployDebianButton.IsEnabled = true;
-                _deployDebianButton.Content = "›";
+                _deployDebianButton.Content = DeployChevron();
             }
         }
     }
