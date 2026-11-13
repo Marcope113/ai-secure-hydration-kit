@@ -121,6 +121,7 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB TOPOLOGY");
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
+        attackerControls.Children.Add(Button("Download " + (_selected == "parrot" ? "Parrot" : "Kali") + " ISO", OpenAttackerIsoPage));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
         attackerControls.Children.Add(_attackerProgressText);
         attackerControls.Children.Add(_attackerProgress);
@@ -275,9 +276,39 @@ public sealed class MainWindow : Window
         _page.Children.Add(footer);
     }
 
+    private void OpenAttackerIsoPage()
+    {
+        // Official vendor download pages provide current ISO versions and checksums.
+        var url = _selected == "parrot"
+            ? "https://parrotsec.org/download/"
+            : "https://www.kali.org/get-kali/";
+        OpenDownloadPage(url, _selected == "parrot" ? "Parrot Security OS" : "Kali Linux");
+    }
+
+    private void OpenAcademyDebianReleases()
+    {
+        // No Academy-customized ISO release is verified yet. Do not substitute stock Debian.
+        OpenDownloadPage("https://github.com/Marcope113/ai-secure-hydration-kit/releases",
+            "Academy Debian ISO (release pending)");
+    }
+
+    private void OpenDownloadPage(string url, string label)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            _activity.Text = label + ": opened download page in browser. Verify the publisher and SHA-256 before use.";
+        }
+        catch (Exception ex)
+        {
+            _activity.Text = "Unable to open " + label + ": " + ex.Message + "  URL: " + url;
+        }
+    }
+
     private Control TargetControls()
     {
         var stack = Stack(8);
+        stack.Children.Add(Button("Get Academy Debian ISO", OpenAcademyDebianReleases));
         stack.Children.Add(PendingInstall("Install Target"));
         stack.Children.Add(_targetProgressText);
         stack.Children.Add(_targetProgress);
