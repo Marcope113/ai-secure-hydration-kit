@@ -627,7 +627,7 @@ public sealed class MainWindow : Window
         _kaliRuntimeLabel = Txt(_kaliRunning ? "● ONLINE" : "● OFFLINE",
             13, _kaliRunning ? Green : Yellow, FontWeight.Bold);
         attackerBody.Children.Add(_kaliRuntimeLabel);
-        attackerBody.Children.Add(VmDetails("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Kali Linux (not installed)\nUSER:PASS   kali:kali (default image)"));
+        attackerBody.Children.Add(VmDetails("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   " + (_kaliConfigured ? "Kali Linux (VM registered)" : "Kali Linux (not installed)") + "\nUSER:PASS   kali:kali"));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
