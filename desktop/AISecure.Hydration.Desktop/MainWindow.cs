@@ -113,7 +113,6 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB TOPOLOGY");
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
-        attackerControls.Children.Add(Button("Save selection", SaveSelection));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
         attackerControls.Children.Add(_attackerProgressText);
         attackerControls.Children.Add(_attackerProgress);
@@ -122,8 +121,12 @@ public sealed class MainWindow : Window
         var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
         Grid.SetColumn(attackerRole, 0);
         attackerHeader.Children.Add(attackerRole);
-        Grid.SetColumn(_distro, 1);
-        attackerHeader.Children.Add(_distro);
+        var selectionArea = Stack(6);
+        selectionArea.HorizontalAlignment = HorizontalAlignment.Right;
+        selectionArea.Children.Add(_distro);
+        selectionArea.Children.Add(Button("Save selection", SaveSelection));
+        Grid.SetColumn(selectionArea, 1);
+        attackerHeader.Children.Add(selectionArea);
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("NOT INSTALLED", 13, Yellow, FontWeight.Bold));
