@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace AISecure.Hydration.Desktop;
 
@@ -20,6 +21,7 @@ public sealed class MainWindow : Window
     private string _selected = "kali";
     private bool _installingVirtualBox;
     private bool _removingVirtualBox;
+    private DispatcherTimer? _circuitTimer;
     private readonly string _isoRoot = ResolveIsoDirectory();
     private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
     private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
@@ -255,6 +257,58 @@ public sealed class MainWindow : Window
         return connector;
     }
 
+    private Control ForkConnector()
+    {
+        // Three vertical branches meet one horizontal bus, leading into the hypervisor.
+        var grid = new Grid {
+            ColumnDefinitions = new ColumnDefinitions("*,150,*"),
+            RowDefinitions = new RowDefinitions("14,3,14"),
+            ColumnSpacing = 12,
+            Height = 31
+        };
+        var branches = new List<Border>();
+        for (var column = 0; column < 3; column++)
+        {
+            var branch = new Border {
+                Width = 3, Background = Paint("#59788C"),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            Grid.SetColumn(branch, column);
+            Grid.SetRow(branch, 0);
+            grid.Children.Add(branch);
+            branches.Add(branch);
+        }
+        var bus = new Border { Height = 3, Background = Paint("#59788C") };
+        Grid.SetRow(bus, 1);
+        Grid.SetColumnSpan(bus, 3);
+        grid.Children.Add(bus);
+        var trunk = new Border {
+            Width = 3, Background = Paint("#59788C"),
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        Grid.SetRow(trunk, 2);
+        Grid.SetColumn(trunk, 1);
+        grid.Children.Add(trunk);
+
+        // Muted cyan pulse = UI activity, not proof of network connectivity.
+        // Only verified connections should ever use the green 'online' state.
+        var phase = 0;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
+        timer.Tick += (_, _) =>
+        {
+            phase = (phase + 1) % 5;
+            for (var i = 0; i < branches.Count; i++)
+            {
+                branches[i].Background = Paint(i == phase % 3 ? "#53DCE8" : "#59788C");
+            }
+            bus.Background = Paint(phase % 2 == 0 ? "#53DCE8" : "#59788C");
+            trunk.Background = Paint(phase % 2 == 1 ? "#53DCE8" : "#59788C");
+        };
+        _circuitTimer = timer;
+        timer.Start();
+        return grid;
+    }
+
     private void Header(string section)
     {
         _page.Children.Clear();
@@ -292,6 +346,8 @@ public sealed class MainWindow : Window
 
     private void ShowSetup()
     {
+        _circuitTimer?.Stop();
+        _circuitTimer = null;
         // Progress is model state; controls belong to one page instance only.
         // Never reparent an existing TextBlock or ProgressBar during Refresh.
         _attackerProgressText = Txt("Waiting to install", 11, Muted);
@@ -405,7 +461,7 @@ public sealed class MainWindow : Window
         Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
         // VM connection remains muted until guests are actually verified.
-        layers.Children.Add(CircuitConnector(false));
+        layers.Children.Add(ForkConnector());
 
         // The hypervisor is the foundation beneath both guest machines.
         var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -532,13 +588,14 @@ public sealed class MainWindow : Window
         var exitButton = Button("Exit", Close);
         exitButton.MinWidth = 220;
         exitButton.Padding = new Thickness(28, 13);
-        exitButton.Background = Paint("#F5AD63");
-        exitButton.BorderBrush = Paint("#F0F5FA");
+        exitButton.Background = Paint("#142B42");
+        exitButton.BorderBrush = Paint("#FF6674");
         exitButton.BorderThickness = new Thickness(1.5);
-        exitButton.Foreground = Paint("#101820");
+        exitButton.Foreground = Paint("#F0F5FA");
         exitButton.CornerRadius = new CornerRadius(9);
         exitButton.FontWeight = FontWeight.Bold;
         exitButton.HorizontalAlignment = HorizontalAlignment.Center;
+        exitButton.HorizontalContentAlignment = HorizontalAlignment.Center;
         exitButton.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(exitButton, 1);
         footer.Children.Add(exitButton);
