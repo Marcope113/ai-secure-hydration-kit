@@ -629,7 +629,7 @@ public sealed class MainWindow : Window
         _next.Classes.Add("academy-next");
         _next.PropertyChanged += (_, args) =>
         {
-            if (args.Property == Button.IsEnabledProperty)
+            if (args.Property == Avalonia.Controls.Button.IsEnabledProperty)
             {
                 _next.Background = Paint(_next.IsEnabled ? "#176B80" : "#142B42");
                 _next.BorderBrush = Paint(_next.IsEnabled ? "#85EAF1" : "#53DCE8");
