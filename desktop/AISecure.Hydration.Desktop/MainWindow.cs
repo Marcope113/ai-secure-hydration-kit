@@ -609,6 +609,12 @@ public sealed class MainWindow : Window
         _installAttackerButton = installAttacker;
         attackerActions.Children.Add(installAttacker);
         attackerControls.Children.Add(attackerActions);
+        if (_kaliConfigured && !_kaliIpVerified)
+        {
+            var configureIp = Button("Configure Kali IP", () => _ = ConfigureKaliIpAsync());
+            configureIp.IsEnabled = _kaliRunning && !_configuringKaliIp;
+            attackerControls.Children.Add(configureIp);
+        }
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
@@ -627,7 +633,7 @@ public sealed class MainWindow : Window
         _kaliRuntimeLabel = Txt(_kaliRunning ? "● ONLINE" : "● OFFLINE",
             13, _kaliRunning ? Green : Yellow, FontWeight.Bold);
         attackerBody.Children.Add(_kaliRuntimeLabel);
-        attackerBody.Children.Add(VmDetails("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   " + (_kaliConfigured ? "Kali Linux (VM registered)" : "Kali Linux (not installed)") + "\nUSER:PASS   kali:kali"));
+        attackerBody.Children.Add(VmDetails("IP ADDRESS   " + (_kaliIpVerified ? "10.4.4.10 (verified)" : "10.4.4.10 (not configured)") + "\nOS VERSION   " + (_kaliConfigured ? "Kali Linux (VM registered)" : "Kali Linux (not installed)") + "\nUSER:PASS   kali:kali"));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -1088,6 +1094,72 @@ public sealed class MainWindow : Window
             if (!_installingAttacker) ShowSetup();
         }
         catch { /* Diagnostics are best-effort; keep manual install available. */ }
+    }
+
+    private bool _kaliIpVerified;
+    private bool _configuringKaliIp;
+    private async Task ConfigureKaliIpAsync()
+    {
+        if (_configuringKaliIp || !_kaliRunning) {
+            _attackerProgressText.Text = "Start Kali and wait for login before configuring its IP.";
+            return;
+        }
+        _configuringKaliIp = true;
+        try
+        {
+            var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Oracle", "VirtualBox", "VBoxManage.exe");
+            if (!File.Exists(vbox)) throw new InvalidOperationException("VirtualBox not installed.");
+            async Task<string> VBox(params string[] args)
+            {
+                var psi = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                foreach (var arg in args) psi.ArgumentList.Add(arg);
+                using var p = Process.Start(psi) ?? throw new InvalidOperationException("Cannot start VBoxManage.");
+                var outputTask = p.StandardOutput.ReadToEndAsync();
+                var errorTask = p.StandardError.ReadToEndAsync();
+                using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(45));
+                try { await p.WaitForExitAsync(timeout.Token); }
+                catch (OperationCanceledException) { try { p.Kill(true); } catch {} throw new TimeoutException("Guest Additions did not respond within 45 seconds."); }
+                var output = await outputTask;
+                var error = await errorTask;
+                if (p.ExitCode != 0) throw new InvalidOperationException(error.Length > 0 ? error : output);
+                return output;
+            }
+            var registered = await VBox("list", "vms");
+            var matches = System.Text.RegularExpressions.Regex.Matches(registered,
+                @"(?im)^""[^""]*kali-linux[^""]*""\s+\{([a-f0-9-]+)\}");
+            if (matches.Count != 1) throw new InvalidOperationException("Cannot uniquely identify the Kali VM.");
+            var uuid = matches[0].Groups[1].Value;
+            // Guest Additions are required for guestcontrol. The lab image uses kali:kali.
+            // nmcli configures only the internal adapter identified by its MAC.
+            var info = await VBox("showvminfo", uuid, "--machinereadable");
+            var macMatch = System.Text.RegularExpressions.Regex.Match(info, @"(?im)^macaddress1=""?([a-f0-9]{12})""?");
+            if (!macMatch.Success) throw new InvalidOperationException("Internal adapter MAC not found.");
+            var mac = string.Join(":", Enumerable.Range(0, 6).Select(i => macMatch.Groups[1].Value.Substring(i * 2, 2))).ToLowerInvariant();
+            var script = "set -eu; " +
+                "dev=$(nmcli -t -f GENERAL.DEVICE,GENERAL.HWADDR device show | awk -F: -v m='" + mac + "' 'BEGIN{IGNORECASE=1} {if(tolower($0) ~ m){print $1; exit}}'); " +
+                "if [ -z \"$dev\" ]; then dev=$(ip -o link | awk -v m='" + mac + "' 'tolower($0) ~ m {gsub(\":\",\"\",$2);print $2;exit}'); fi; " +
+                "[ -n \"$dev\" ] || exit 42; " +
+                "nmcli connection show aisecurelab-kali >/dev/null 2>&1 || nmcli connection add type ethernet ifname \"$dev\" con-name aisecurelab-kali; " +
+                "nmcli connection modify aisecurelab-kali connection.interface-name \"$dev\" ipv4.method manual ipv4.addresses 10.4.4.10/24 ipv4.gateway \"\" ipv4.never-default yes ipv6.method disabled; " +
+                "nmcli connection up aisecurelab-kali; ip -4 -o addr show dev \"$dev\"";
+            _attackerProgressText.Text = "Configuring Kali internal network through Guest Additions...";
+            // Explicit default credentials for this disposable training image.
+            var result = await VBox("guestcontrol", uuid, "run", "--username", "kali",
+                "--password", "kali", "--wait-stdout", "--wait-stderr",
+                "--exe", "/bin/bash", "--", "bash", "-lc",
+                "echo kali | sudo -S /bin/bash -lc " + "'" + script.Replace("'", "'\\''") + "'");
+            if (!result.Contains("10.4.4.10/24", StringComparison.Ordinal))
+                throw new InvalidOperationException("Guest did not report 10.4.4.10/24 after configuration.");
+            _kaliIpVerified = true;
+            _attackerProgressText.Text = "Kali internal IP verified: 10.4.4.10/24";
+            ShowSetup();
+        }
+        catch (Exception ex) { _attackerProgressText.Text = "Kali IP configuration pending: " + ex.Message; }
+        finally { _configuringKaliIp = false; }
     }
 
     private async Task OpenKaliVirtualBoxAsync()
