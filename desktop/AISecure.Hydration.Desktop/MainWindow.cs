@@ -18,6 +18,7 @@ public sealed class MainWindow : Window
     private TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
     private Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
     private string _selected = "kali";
+    private bool _installingVirtualBox;
     private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
     private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
     private ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
@@ -264,11 +265,70 @@ public sealed class MainWindow : Window
         body.Children.Add(Txt(status, 13, statusColor, FontWeight.Bold));
         if (installLabel is not null)
         {
-            // No provisioning operation is wired yet: never show a misleading active install button.
-            body.Children.Add(Txt("Automatic install: coming after validation", 11, Yellow));
+            if (title == "VIRTUALBOX")
+                body.Children.Add(Button(_installingVirtualBox ? "Installing..." : "Install", () => _ = InstallVirtualBoxAsync()));
             body.Children.Add(Button("Manual instructions", () => ShowInstructions(title, manual)));
         }
         return Tile(body);
+    }
+
+    private async Task InstallVirtualBoxAsync()
+    {
+        if (_installingVirtualBox) return;
+        var dialog = new Window {
+            Title = "Confirm VirtualBox installation", Width = 500, Height = 220,
+            Background = Paint("#152332"), WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        var panel = Stack(12);
+        panel.Margin = new Thickness(22);
+        panel.Children.Add(Txt("Install Oracle VirtualBox using Windows Package Manager (winget)?", 16, Text));
+        panel.Children.Add(Txt("This modifies Windows and may request administrator approval.", 12, Muted));
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        buttons.Children.Add(Button("Cancel", () => dialog.Close(false)));
+        buttons.Children.Add(Button("Install", () => dialog.Close(true)));
+        panel.Children.Add(buttons);
+        dialog.Content = panel;
+        if (!await dialog.ShowDialog<bool>(this)) return;
+
+        _installingVirtualBox = true;
+        _activity.Text = "Installing VirtualBox via winget. Please wait...";
+        try
+        {
+            var start = new ProcessStartInfo("winget.exe") {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            foreach (var arg in new[] {
+                "install", "--id", "Oracle.VirtualBox", "--exact", "--source", "winget",
+                "--accept-source-agreements", "--accept-package-agreements"
+            }) start.ArgumentList.Add(arg);
+            using var process = Process.Start(start) ?? throw new InvalidOperationException("Unable to start winget.");
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var output = await stdout;
+            var error = await stderr;
+            var logDir = Path.Combine(_root, "logs");
+            Directory.CreateDirectory(logDir);
+            var logPath = Path.Combine(logDir, "virtualbox-install.log");
+            await File.WriteAllTextAsync(logPath, output + Environment.NewLine + error);
+            if (process.ExitCode != 0)
+                throw new InvalidOperationException($"winget exited with code {process.ExitCode}. Log: {logPath}");
+            _activity.Text = "VirtualBox installation completed. Refreshing requirements.";
+        }
+        catch (Exception ex)
+        {
+            _activity.Text = "VirtualBox installation failed: " + ex.Message;
+            ShowInstructions("VirtualBox installation failed",
+                "Install manually from https://www.virtualbox.org/wiki/Downloads and reopen the app. " +
+                "Error: " + ex.Message);
+        }
+        finally
+        {
+            _installingVirtualBox = false;
+            // Refresh the requirement tiles after the process finishes.
+            ShowSetup();
+        }
     }
 
     private void ShowInstructions(string title, string instructions)
