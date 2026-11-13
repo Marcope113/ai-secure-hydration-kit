@@ -905,7 +905,6 @@ public sealed class MainWindow : Window
             if (_kaliConfigured)
             {
                 attacker.BorderBrush = Paint(_kaliRunning ? Green : Yellow);
-                installAttacker.BorderBrush = Paint(Green);
             }
             if (installHypervisorPulse is not null)
                 installHypervisorPulse.BorderBrush = Paint(circuitOverlay.Bright ? "#85EAF1" : "#397389");
@@ -1145,7 +1144,6 @@ public sealed class MainWindow : Window
 
     private bool _dhcpConfigured;
     private bool _configuringDhcp;
-    private Button? _dhcpButton;
     private TextBlock? _dhcpStateLabel;
     private bool _kaliIpVerified;
     private bool _configuringKaliIp;
@@ -1153,7 +1151,6 @@ public sealed class MainWindow : Window
     {
         if (_configuringDhcp) return;
         _configuringDhcp = true;
-        if (_dhcpButton is not null) _dhcpButton.IsEnabled = false;
         try
         {
             var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -1190,7 +1187,6 @@ public sealed class MainWindow : Window
                 throw new InvalidOperationException("DHCP server was not found after configuration.");
             _dhcpConfigured = true;
             if (_dhcpStateLabel is not null) { _dhcpStateLabel.Text = "● ENABLED"; _dhcpStateLabel.Foreground = Paint(Green); }
-            if (_dhcpButton is not null) { _dhcpButton.Content = "DHCP Enabled"; _dhcpButton.BorderBrush = Paint(Green); }
             _activity.Text = "Internal DHCP configured for aisecurelab (10.4.4.100–200). Guest IP lease not yet verified.";
         }
         catch (Exception ex)
@@ -1201,7 +1197,6 @@ public sealed class MainWindow : Window
         finally
         {
             _configuringDhcp = false;
-            if (_dhcpButton is not null) _dhcpButton.IsEnabled = !_dhcpConfigured;
         }
     }
 
