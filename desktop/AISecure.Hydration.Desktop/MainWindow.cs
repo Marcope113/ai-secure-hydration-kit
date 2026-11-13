@@ -552,7 +552,7 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB ARCHITECTURE");
         var topology = Stack(2);
         topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
-        var layers = Stack(18);
+        var layers = Stack(12);
         Control WithLayer(Control content, string layer, string description)
         {
             var frame = new Grid();
@@ -755,8 +755,8 @@ public sealed class MainWindow : Window
         };
         _networkOuterTile = linkTile;
         // Network stays a normal interactive card; the overlay owns every circuit line.
-        var networkColumn = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), RowSpacing = 8 };
-        var dhcpPanel = Stack(4);
+        var networkColumn = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), RowSpacing = 5 };
+        var dhcpPanel = Stack(2);
         dhcpPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
         var dhcpHeading = Txt("DHCP SERVER", 12, Accent, FontWeight.Bold);
         dhcpHeading.TextAlignment = TextAlignment.Center;
@@ -772,7 +772,7 @@ public sealed class MainWindow : Window
         dhcpAuto.TextAlignment = TextAlignment.Center;
         dhcpPanel.Children.Add(dhcpAuto);
         var dhcpTile = Tile(dhcpPanel, "#20384A");
-        dhcpTile.Padding = new Thickness(10, 9);
+        dhcpTile.Padding = new Thickness(8, 6);
         dhcpTile.BorderBrush = Paint(_dhcpConfigured ? Green : Yellow);
         dhcpTile.BorderThickness = new Thickness(2);
         _dhcpOuterTile = dhcpTile;
@@ -861,6 +861,7 @@ public sealed class MainWindow : Window
             foundationInfo.Children.Add(installHypervisor);
         }
         var foundationCard = Tile(foundationInfo, "#20384A");
+        foundationCard.Padding = new Thickness(9, 8);
         SetReadyOutline(foundationCard, hypervisorReady);
         var foundationTile = WithLayer(foundationCard, "LAYER 02", "Hypervisor  /  Virtualization platform");
         layers.Children.Add(foundationTile);
@@ -878,7 +879,7 @@ public sealed class MainWindow : Window
         hostTitle.TextAlignment = TextAlignment.Center;
         hostTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(hostTitle);
-        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*"), ColumnSpacing = 10 };
+        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*"), ColumnSpacing = 7 };
         var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
             "Windows 11 x64 is required for this Windows preview.", null);
         var diskTile = Requirement("DISK SPACE", $"{free:F1} GB free", diskOk ? "SUPPORTED" : "NOT ENOUGH SPACE", diskOk ? Green : Red,
@@ -910,6 +911,7 @@ public sealed class MainWindow : Window
 
         var hostReady = archOk && diskOk && ramOk && logicalProcessors >= 4;
         var hostCard = Tile(physicalHost, "#1B3042");
+        hostCard.Padding = new Thickness(8);
         SetReadyOutline(hostCard, hostReady);
         var hostTile = WithLayer(hostCard, "LAYER 01", "Physical Host  /  Hardware and operating system");
         layers.Children.Add(hostTile);
@@ -951,7 +953,8 @@ public sealed class MainWindow : Window
         var architecturePanel = new Border {
             Background = Paint("#0D1E2D"), CornerRadius = new CornerRadius(18),
             BorderBrush = Paint("#35566B"), BorderThickness = new Thickness(1),
-            Padding = new Thickness(12), Child = topology
+            Padding = new Thickness(9), Child = topology,
+            MaxWidth = 1490, HorizontalAlignment = HorizontalAlignment.Center
         };
         _page.Children.Add(architecturePanel);
 
