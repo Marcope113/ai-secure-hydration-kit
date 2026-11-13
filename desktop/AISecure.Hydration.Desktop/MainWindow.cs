@@ -178,7 +178,7 @@ public sealed class MainWindow : Window
     private Control VmResourceControls(string role)
     {
         var panel = Stack(8);
-        panel.Width = 205;
+        panel.Width = 175;
         panel.Children.Add(Txt("VM RESOURCES", 11, Accent, FontWeight.Bold));
         // Course lab limits: deliberately small, predictable VM allocations.
         const int maxRam = 8;
@@ -261,10 +261,12 @@ public sealed class MainWindow : Window
     {
         // Three vertical branches meet one horizontal bus, leading into the hypervisor.
         var grid = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("*,150,*"),
-            RowDefinitions = new RowDefinitions("14,3,14"),
+            ColumnDefinitions = new ColumnDefinitions("*,170,*"),
+            RowDefinitions = new RowDefinitions("12,3,10"),
             ColumnSpacing = 12,
-            Height = 31
+            Height = 25,
+            MaxWidth = 780,
+            HorizontalAlignment = HorizontalAlignment.Center
         };
         var branches = new List<Border>();
         for (var column = 0; column < 3; column++)
@@ -278,7 +280,7 @@ public sealed class MainWindow : Window
             grid.Children.Add(branch);
             branches.Add(branch);
         }
-        var bus = new Border { Height = 3, Background = Paint("#59788C") };
+        var bus = new Border { Height = 3, Background = Paint("#59788C"), Margin = new Thickness(50, 0) };
         Grid.SetRow(bus, 1);
         Grid.SetColumnSpan(bus, 3);
         grid.Children.Add(bus);
@@ -378,28 +380,28 @@ public sealed class MainWindow : Window
             var frame = new Grid();
             frame.Children.Add(content);
             var labels = Stack(3);
-            labels.HorizontalAlignment = HorizontalAlignment.Right;
-            labels.VerticalAlignment = layer == "LAYER 03" ? VerticalAlignment.Bottom : VerticalAlignment.Top;
-            labels.Margin = layer == "LAYER 03" ? new Thickness(0, 0, 9, 7) : new Thickness(0, 5, 9, 0);
+            labels.HorizontalAlignment = layer == "LAYER 03" ? HorizontalAlignment.Center : HorizontalAlignment.Right;
+            labels.VerticalAlignment = layer == "LAYER 03" ? VerticalAlignment.Top : VerticalAlignment.Top;
+            labels.Margin = new Thickness(0, 5, 9, 0);
             labels.IsHitTestVisible = false;
             foreach (var line in new[] { layer, description })
             {
                 var text = Txt(line, line == layer ? 11 : 10, Muted,
                     line == layer ? FontWeight.Bold : FontWeight.Normal);
-                text.TextAlignment = TextAlignment.Right;
+                text.TextAlignment = layer == "LAYER 03" ? TextAlignment.Center : TextAlignment.Right;
                 text.Opacity = line == layer ? 0.65 : 0.55;
                 labels.Children.Add(text);
             }
             frame.Children.Add(labels);
             return frame;
         }
-        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
         attackerControls.Children.Add(Button("Get Kali VirtualBox Image", OpenAttackerIsoPage));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
         attackerControls.Children.Add(_attackerProgressText);
         attackerControls.Children.Add(_attackerProgress);
-        var attackerBody = Stack(10);
+        var attackerBody = Stack(7);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
         Grid.SetColumn(attackerRole, 0);
@@ -412,7 +414,7 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
         attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
         attackerBody.Children.Add(attackerControls);
-        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,205"), ColumnSpacing = 16 };
+        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,175"), ColumnSpacing = 10 };
         Grid.SetColumn(attackerBody, 0); attackerLayout.Children.Add(attackerBody);
         var attackerResources = VmResourceControls("attacker");
         Grid.SetColumn(attackerResources, 1); attackerLayout.Children.Add(attackerResources);
@@ -452,7 +454,7 @@ public sealed class MainWindow : Window
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
             "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
             targetActions);
-        var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,205"), ColumnSpacing = 16 };
+        var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,175"), ColumnSpacing = 10 };
         Grid.SetColumn(target, 0); targetLayout.Children.Add(target);
         var targetResources = VmResourceControls("target");
         Grid.SetColumn(targetResources, 1); targetLayout.Children.Add(targetResources);
