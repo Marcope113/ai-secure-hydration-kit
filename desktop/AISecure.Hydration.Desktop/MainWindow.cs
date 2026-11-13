@@ -33,6 +33,7 @@ public sealed class MainWindow : Window
     private bool _kaliRunning;
     private bool _checkingKaliRuntime;
     private TextBlock? _kaliRuntimeLabel;
+    private Border? _kaliOuterTile;
     private int _runtimePollTicks;
     private Button? _installAttackerButton;
     private string? _verifiedKaliPath;
@@ -653,7 +654,9 @@ public sealed class MainWindow : Window
         attackerProgressArea.Children.Add(_attackerProgress);
         attackerCard.Children.Add(attackerProgressArea);
         var attacker = Tile(attackerCard); attacker.Padding = new Thickness(7);
-        SetReadyOutline(attacker, _kaliConfigured); // VM registration and configuration completed; guest check still pending.
+        attacker.BorderBrush = Paint(_kaliRunning ? Green : Yellow);
+        attacker.BorderThickness = new Thickness(2);
+        _kaliOuterTile = attacker;
         var attackerLayer = WithLayer(attacker, "LAYER 03", "Virtual Machines  /  Attacker");
         Grid.SetColumn(attackerLayer, 0); network.Children.Add(attackerLayer);
         var link = Stack(3);
@@ -841,7 +844,7 @@ public sealed class MainWindow : Window
             // Configured Kali stays solid green; only pending connections pulse.
             if (_kaliConfigured)
             {
-                attacker.BorderBrush = Paint(Green);
+                attacker.BorderBrush = Paint(_kaliRunning ? Green : Yellow);
                 installAttacker.BorderBrush = Paint(Green);
             }
             if (installHypervisorPulse is not null)
@@ -992,6 +995,7 @@ public sealed class MainWindow : Window
             {
                 _kaliRuntimeLabel.Text = running ? "● ONLINE" : "● OFFLINE";
                 _kaliRuntimeLabel.Foreground = Paint(running ? Green : Yellow);
+                if (_kaliOuterTile is not null) _kaliOuterTile.BorderBrush = Paint(running ? Green : Yellow);
             }
         }
         catch { /* Leave last known status if VirtualBox cannot be queried. */ }
