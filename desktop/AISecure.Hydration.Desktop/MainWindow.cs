@@ -850,32 +850,40 @@ public sealed class MainWindow : Window
         _attackerProgressText.Text = "Preparing Kali extraction...";
         try
         {
-            var workspace = Path.Combine(_root, "virtual-machines", "kali");
-            // This is an application-owned workspace. Never remove files of a
-            // registered VM, including one that is currently powered off.
-            if (Directory.Exists(workspace))
+            // Each installation attempt gets its own timestamped workspace.
+            // Only abandoned attempts created by this installer may be cleaned.
+            var kaliRoot = Path.Combine(_root, "virtual-machines", "kali");
+            Directory.CreateDirectory(kaliRoot);
+            var list = new ProcessStartInfo(vbox) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            list.ArgumentList.Add("list");
+            list.ArgumentList.Add("vms");
+            list.ArgumentList.Add("--long");
+            using var registered = Process.Start(list)
+                ?? throw new InvalidOperationException("Cannot inspect registered VirtualBox VMs.");
+            var vmOutputTask = registered.StandardOutput.ReadToEndAsync();
+            var vmErrorTask = registered.StandardError.ReadToEndAsync();
+            await registered.WaitForExitAsync();
+            var vmOutput = await vmOutputTask;
+            var vmError = await vmErrorTask;
+            if (registered.ExitCode != 0)
+                throw new InvalidOperationException("Cannot verify existing VMs: " + vmError);
+            var todayPrefix = DateTime.Now.ToString("yyyyMMdd") + "-";
+            foreach (var previous in Directory.GetDirectories(kaliRoot, todayPrefix + "*"))
             {
-                var list = new ProcessStartInfo(vbox) {
-                    UseShellExecute = false, CreateNoWindow = true,
-                    RedirectStandardOutput = true, RedirectStandardError = true
-                };
-                list.ArgumentList.Add("list");
-                list.ArgumentList.Add("vms");
-                list.ArgumentList.Add("--long");
-                using var registered = Process.Start(list)
-                    ?? throw new InvalidOperationException("Cannot inspect registered VirtualBox VMs.");
-                var vmOutputTask = registered.StandardOutput.ReadToEndAsync();
-                var vmErrorTask = registered.StandardError.ReadToEndAsync();
-                await registered.WaitForExitAsync();
-                var vmOutput = await vmOutputTask;
-                var vmError = await vmErrorTask;
-                if (registered.ExitCode != 0)
-                    throw new InvalidOperationException("Cannot verify existing VMs: " + vmError);
-                if (vmOutput.Contains(workspace, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException("Kali workspace belongs to a registered VirtualBox VM. Unregister it safely before reinstalling.");
-                Directory.Delete(workspace, recursive: true);
+                var incompleteMarker = Path.Combine(previous, ".aisecure-extraction-incomplete");
+                if (!File.Exists(incompleteMarker)) continue;
+                if (vmOutput.Contains(previous, StringComparison.OrdinalIgnoreCase)) continue;
+                try { Directory.Delete(previous, recursive: true); }
+                catch (IOException) { /* Keep locked files and use a fresh workspace. */ }
+                catch (UnauthorizedAccessException) { /* Never force-delete locked files. */ }
             }
+            var workspace = Path.Combine(kaliRoot, DateTime.Now.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(workspace);
+            var extractionMarker = Path.Combine(workspace, ".aisecure-extraction-incomplete");
+            File.WriteAllText(extractionMarker, "Owned by AI Secure Hydration Kit; incomplete extraction.");
             _attackerProgressText.Text = "Extracting Kali archive...";
             // Read archive member names to estimate extraction progress by
             // completed files. This is an estimate, not a byte-accurate percent.
@@ -935,6 +943,7 @@ public sealed class MainWindow : Window
                 if (process.ExitCode != 0)
                     throw new InvalidOperationException("Kali extraction failed: " + error);
             }
+            File.Delete(extractionMarker);
             _attackerProgress.IsIndeterminate = false;
             _attackerProgress.Value = 70;
             _attackerProgressText.Text = "Extraction complete - locating VM configuration...";
