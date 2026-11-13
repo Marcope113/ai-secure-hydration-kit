@@ -470,11 +470,17 @@ public sealed class MainWindow : Window
         };
         for (var i = 0; i < items.Length; i++)
         {
-            var body = Stack(4);
-            body.Children.Add(Txt(items[i].Item1, 12, Text, FontWeight.SemiBold));
-            body.Children.Add(Txt(items[i].Item2, 10, Muted));
+            var body = Stack(5);
+            var techniqueTitle = Txt(items[i].Item1, 14, Text, FontWeight.SemiBold);
+            techniqueTitle.TextAlignment = TextAlignment.Center;
+            techniqueTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
+            body.Children.Add(techniqueTitle);
+            var techniqueDescription = Txt(items[i].Item2, 12, Muted);
+            techniqueDescription.TextAlignment = TextAlignment.Center;
+            techniqueDescription.HorizontalAlignment = HorizontalAlignment.Stretch;
+            body.Children.Add(techniqueDescription);
             var tile = Tile(body);
-            tile.Padding = new Thickness(9, 11);
+            tile.Padding = new Thickness(9, 13);
             Grid.SetColumn(tile, i); techniques.Children.Add(tile);
         }
         overview.Children.Add(techniques);
