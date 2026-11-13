@@ -835,9 +835,7 @@ public sealed class MainWindow : Window
                 body.Children.Add(Button(_installingVirtualBox ? "Installing..." : "Install", () => _ = InstallVirtualBoxAsync()));
             body.Children.Add(Button("Manual instructions", () => ShowInstructions(title, manual)));
         }
-        var requirementTile = Tile(body);
-        SetReadyOutline(requirementTile, status == "SUPPORTED");
-        return requirementTile;
+        return Tile(body);
     }
 
     private Window ShowVirtualBoxProgress(string action)
