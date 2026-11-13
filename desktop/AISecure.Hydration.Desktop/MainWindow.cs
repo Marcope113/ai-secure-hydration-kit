@@ -753,7 +753,7 @@ public sealed class MainWindow : Window
             _dhcpConfigured ? Green : Yellow, FontWeight.Bold);
         _dhcpStateLabel.TextAlignment = TextAlignment.Center;
         dhcpPanel.Children.Add(_dhcpStateLabel);
-        var dhcpRange = Txt("IP RANGE   10.4.4.100 – 10.4.4.200/24", 13, Muted);
+        var dhcpRange = Txt("IP RANGE   10.4.4.100 – 10.4.4.101/24", 13, Muted);
         dhcpRange.TextAlignment = TextAlignment.Center;
         dhcpPanel.Children.Add(dhcpRange);
         var dhcpAuto = Txt("Automatic on VM start", 13, Muted);
@@ -1212,15 +1212,16 @@ public sealed class MainWindow : Window
             if (!current.Contains("aisecurelab", StringComparison.OrdinalIgnoreCase))
                 await Run("dhcpserver", "add", "--network", "aisecurelab",
                     "--server-ip", "10.4.4.1", "--netmask", "255.255.255.0",
-                    "--lower-ip", "10.4.4.100", "--upper-ip", "10.4.4.200", "--enable");
+                    "--lower-ip", "10.4.4.100", "--upper-ip", "10.4.4.101", "--enable");
             else
-                await Run("dhcpserver", "modify", "--network", "aisecurelab", "--enable");
+                await Run("dhcpserver", "modify", "--network", "aisecurelab",
+                    "--lower-ip", "10.4.4.100", "--upper-ip", "10.4.4.101", "--enable");
             var verified = await Run("list", "dhcpservers");
             if (!verified.Contains("aisecurelab", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("DHCP server was not found after configuration.");
             _dhcpConfigured = true;
             if (_dhcpStateLabel is not null) { _dhcpStateLabel.Text = "● ENABLED"; _dhcpStateLabel.Foreground = Paint(Green); }
-            _activity.Text = "Internal DHCP configured for aisecurelab (10.4.4.100–200). Guest IP lease not yet verified.";
+            _activity.Text = "Internal DHCP configured for aisecurelab (10.4.4.100–101). Guest IP lease not yet verified.";
         }
         catch (Exception ex)
         {
@@ -1307,60 +1308,57 @@ public sealed class MainWindow : Window
         {
             var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "Oracle", "VirtualBox", "VBoxManage.exe");
-            var info = new ProcessStartInfo(vbox) { UseShellExecute = false,
-                RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
-            foreach (var arg in new[] { "showvminfo", uuid, "--machinereadable" }) info.ArgumentList.Add(arg);
-            using var vmInfo = Process.Start(info) ?? throw new InvalidOperationException("VirtualBox VM information unavailable");
-            var infoOut = vmInfo.StandardOutput.ReadToEndAsync();
-            var infoErr = vmInfo.StandardError.ReadToEndAsync();
-            await vmInfo.WaitForExitAsync();
-            var vmConfig = await infoOut;
-            await infoErr;
-            var macMatch = System.Text.RegularExpressions.Regex.Match(vmConfig, @"(?im)^macaddress1=""?([a-f0-9]{12})""?");
-            if (!macMatch.Success) throw new InvalidOperationException("Internal NIC MAC unavailable");
+            async Task<string> Run(params string[] args)
+            {
+                var psi = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                foreach (var arg in args) psi.ArgumentList.Add(arg);
+                using var process = Process.Start(psi) ?? throw new InvalidOperationException("VBoxManage unavailable");
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                var stderr = process.StandardError.ReadToEndAsync();
+                using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(15));
+                try { await process.WaitForExitAsync(timeout.Token); }
+                catch (OperationCanceledException) { try { process.Kill(true); } catch {} throw new TimeoutException("VirtualBox DHCP query timed out"); }
+                var result = await stdout;
+                var error = await stderr;
+                if (process.ExitCode != 0) throw new InvalidOperationException(error.Length > 0 ? error : result);
+                return result;
+            }
+            var info = await Run("showvminfo", uuid, "--machinereadable");
+            var macMatch = System.Text.RegularExpressions.Regex.Match(info, @"(?im)^macaddress1=""?([a-f0-9]{12})""?");
+            if (!macMatch.Success) throw new InvalidOperationException("Kali internal NIC MAC unavailable");
             var mac = string.Join(":", Enumerable.Range(0, 6)
                 .Select(i => macMatch.Groups[1].Value.Substring(i * 2, 2))).ToLowerInvariant();
-            // Match the VirtualBox internal adapter by MAC, not by a guessed eth0 name.
-            var script = "set -eu; dev=''; for p in /sys/class/net/*/address; do " +
-                "if [ \"$(cat \"$p\")\" = '" + mac + "' ]; then dev=$(basename \"$(dirname \"$p\")\"); break; fi; done; " +
-                "[ -n \"$dev\" ] || exit 42; " +
-                "nmcli connection show aisecurelab-dhcp >/dev/null 2>&1 || " +
-                "nmcli connection add type ethernet ifname \"$dev\" con-name aisecurelab-dhcp; " +
-                "nmcli connection modify aisecurelab-dhcp connection.interface-name \"$dev\" ipv4.method auto ipv4.never-default yes ipv6.method disabled; " +
-                "nmcli connection up aisecurelab-dhcp; ip -4 -o addr show dev \"$dev\"";
+            // findlease queries VirtualBox's DHCP database; no Guest Additions required.
             for (var attempt = 0; attempt < 8; attempt++)
             {
-                var psi = new ProcessStartInfo(vbox) { UseShellExecute = false,
-                    RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
-                foreach (var arg in new[] { "guestcontrol", uuid, "run", "--username", "kali",
-                    "--password", "kali", "--wait-stdout", "--wait-stderr",
-                    "--exe", "/bin/bash", "--", "bash", "-lc",
-                    "echo kali | sudo -S /bin/bash -lc " + "'" + script.Replace("'", "'\\''") + "'" })
-                    psi.ArgumentList.Add(arg);
-                using var proc = Process.Start(psi) ?? throw new InvalidOperationException("Guest control unavailable");
-                var stdout = proc.StandardOutput.ReadToEndAsync();
-                var stderr = proc.StandardError.ReadToEndAsync();
-                using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(25));
-                try { await proc.WaitForExitAsync(timeout.Token); }
-                catch (OperationCanceledException) { try { proc.Kill(true); } catch {} }
-                var output = await stdout;
-                var error = await stderr;
-                var match = System.Text.RegularExpressions.Regex.Match(output,
-                    @"\binet\s+(10\.4\.4\.\d{1,3})/24\b");
-                if (match.Success && proc.ExitCode == 0)
+                try
                 {
-                    _kaliDhcpAddress = match.Groups[1].Value;
-                    _kaliIpVerified = true;
-                    _attackerProgressText.Text = "Kali DHCP verified: " + _kaliDhcpAddress;
-                    ShowSetup();
-                    return;
+                    var lease = await Run("dhcpserver", "findlease", "--network", "aisecurelab",
+                        "--mac-address", mac);
+                    var match = System.Text.RegularExpressions.Regex.Match(lease,
+                        @"\b10\.4\.4\.(?:100|101)\b");
+                    if (match.Success)
+                    {
+                        var ip = match.Value;
+                        if (_kaliDhcpAddress != ip || !_kaliIpVerified)
+                        {
+                            _kaliDhcpAddress = ip;
+                            _kaliIpVerified = true;
+                            _attackerProgressText.Text = "VirtualBox DHCP lease: " + ip;
+                            ShowSetup();
+                        }
+                        return;
+                    }
                 }
-                if (attempt == 7)
-                    throw new InvalidOperationException("Guest DHCP not confirmed. Check Guest Additions and NetworkManager. " + error);
-                await Task.Delay(3000);
+                catch (InvalidOperationException) { /* Lease may not exist yet. */ }
+                if (attempt < 7) await Task.Delay(2500);
             }
+            _attackerProgressText.Text = "DHCP lease not found for Kali MAC. Check DHCP and guest network.";
         }
-        catch (Exception ex) { _attackerProgressText.Text = "DHCP pending: " + ex.Message; }
+        catch (Exception ex) { _attackerProgressText.Text = "DHCP lease lookup failed: " + ex.Message; }
         finally { _requestingKaliDhcp = false; }
     }
 
