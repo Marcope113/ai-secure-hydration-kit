@@ -274,18 +274,19 @@ public sealed class MainWindow : Window
             lines.Add(segment);
             return segment;
         }
-        Segment(35, 0, 2, 14);
-        Segment(219, 0, 2, 14);
-        Segment(403, 0, 2, 14);
-        Segment(35, 13, 370, 2);
-        Segment(219, 15, 2, 19);
+        Segment(35, 0, 4, 14);
+        Segment(218, 0, 4, 14);
+        Segment(401, 0, 4, 14);
+        Segment(35, 12, 370, 4);
+        Segment(218, 15, 4, 19);
         var phase = 0;
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
         timer.Tick += (_, _) =>
         {
-            phase = (phase + 1) % lines.Count;
-            for (var i = 0; i < lines.Count; i++)
-                lines[i].Background = Paint(i == phase ? "#53DCE8" : "#59788C");
+            phase = (phase + 1) % 2;
+            var pulseColor = phase == 0 ? "#53DCE8" : "#3B6476";
+            foreach (var line in lines)
+                line.Background = Paint(pulseColor);
         };
         _circuitTimer = timer;
         timer.Start();
@@ -376,7 +377,7 @@ public sealed class MainWindow : Window
             frame.Children.Add(labels);
             return frame;
         }
-        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,*"), ColumnSpacing = 12 };
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,220,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
         attackerControls.Children.Add(Button("Get Kali VirtualBox Image", OpenAttackerIsoPage));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
@@ -393,15 +394,15 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
         attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
         attackerBody.Children.Add(attackerControls);
-        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,315"), ColumnSpacing = 10 };
+        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,175"), ColumnSpacing = 10 };
         Grid.SetColumn(attackerBody, 0); attackerLayout.Children.Add(attackerBody);
         var attackerResources = VmResourceControls("attacker");
-        attackerResources.Margin = new Thickness(0, 0, 140, 0);
+        attackerResources.Margin = new Thickness(0);
         Grid.SetColumn(attackerResources, 1); attackerLayout.Children.Add(attackerResources);
         var attackerCard = Stack(6);
         attackerCard.Children.Add(attackerLayout);
         var attackerProgressArea = Stack(4);
-        attackerProgressArea.Margin = new Thickness(0, 0, 140, 0);
+        attackerProgressArea.Margin = new Thickness(0);
         attackerProgressArea.Children.Add(_attackerProgressText);
         attackerProgressArea.Children.Add(_attackerProgress);
         attackerCard.Children.Add(attackerProgressArea);
@@ -444,12 +445,12 @@ public sealed class MainWindow : Window
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,175"), ColumnSpacing = 10 };
         Grid.SetColumn(target, 0); targetLayout.Children.Add(target);
         var targetResources = VmResourceControls("target");
-        targetResources.Margin = new Thickness(0, 0, 140, 0);
+        targetResources.Margin = new Thickness(0);
         Grid.SetColumn(targetResources, 1); targetLayout.Children.Add(targetResources);
         var targetCard = Stack(6);
         targetCard.Children.Add(targetLayout);
         var targetProgressArea = Stack(4);
-        targetProgressArea.Margin = new Thickness(0, 0, 140, 0);
+        targetProgressArea.Margin = new Thickness(0);
         targetProgressArea.Children.Add(_targetProgressText);
         targetProgressArea.Children.Add(_targetProgress);
         targetCard.Children.Add(targetProgressArea);
