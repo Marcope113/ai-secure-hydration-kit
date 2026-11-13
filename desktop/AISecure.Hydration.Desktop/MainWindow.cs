@@ -9,6 +9,8 @@ namespace AISecure.Hydration.Desktop;
 
 public sealed class MainWindow : Window
 {
+    private readonly StackPanel _main = new() { Spacing = 18, Margin = new Thickness(28) };
+    private readonly Button _next = new() { Content = "Next: Learning Path  >", IsEnabled = false, Padding = new Thickness(18, 10) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _host = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _target = new() { TextWrapping = TextWrapping.Wrap };
@@ -31,7 +33,7 @@ public sealed class MainWindow : Window
         MinHeight = 560;
         Background = new SolidColorBrush(Color.Parse("#0B1520"));
 
-        var main = new StackPanel { Spacing = 18, Margin = new Thickness(28) };
+        var main = _main;
         main.Children.Add(Label("// AI SECURE  A C A D E M Y", 21, "#55DCE8", FontWeight.Bold));
         main.Children.Add(Label("LEARN  /  PRACTICE  /  VALIDATE", 12, "#A7B8CB"));
         main.Children.Add(Label("HYDRATION KIT: Linux PrivEsc Techniques", 24, "#F1F5F9", FontWeight.SemiBold));
@@ -62,18 +64,48 @@ public sealed class MainWindow : Window
         buttons.Children.Add(refresh);
         buttons.Children.Add(save);
         main.Children.Add(buttons);
-        main.Children.Add(Label("LEARNING PATH  /  COMING SOON", 15, "#55DCE8", FontWeight.Bold));
-        main.Children.Add(Label("01  Linux Fundamentals   |   Users, permissions and processes", 14, "#F2F6FC"));
-        main.Children.Add(Label("02  Sudo Misconfigurations   |   Enumeration and detection", 14, "#F2F6FC"));
-        main.Children.Add(Label("03  SUID Exploitation   |   Privileged binaries", 14, "#F2F6FC"));
-        main.Children.Add(Label("04  Cron Jobs   |   Scheduled tasks", 14, "#F2F6FC"));
-        main.Children.Add(Label("05  Linux Capabilities   |   Capability abuse", 14, "#F2F6FC"));
-        main.Children.Add(Label("Lessons are placeholders; offline content and validation are not enabled.", 12, "#E8B65B"));
+        main.Children.Add(Label("STEP 1 OF 2  /  PREPARE YOUR LAB", 15, "#55DCE8", FontWeight.Bold));
+        main.Children.Add(Label("Learning Path unlocks after the target and attacker VMs have been verified.", 13, "#A7B8CB"));
+        _next.Click += (_, _) => ShowLearningPath();
+        main.Children.Add(_next);
         main.Children.Add(Label("ACTIVITY", 15, "#55DCE8", FontWeight.Bold));
         main.Children.Add(_status);
         main.Children.Add(Label("Preview: installation controls are disabled until verified. Manual instructions are available for requirements.", 12, "#E8B65B"));
         Content = new ScrollViewer { Content = main };
         Refresh();
+        UpdateNextState();
+    }
+
+    private void UpdateNextState()
+    {
+        // Do not infer readiness from manifest presence. A future health check must
+        // verify guest installation, both VM states, and isolated networking.
+        _next.IsEnabled = false;
+        _next.Content = "Next: Learning Path  (Lab verification pending)";
+    }
+
+    private void ShowLearningPath()
+    {
+        if (!_next.IsEnabled) return;
+        _main.Children.Clear();
+        _main.Children.Add(Label("// AI SECURE  A C A D E M Y", 21, "#55DCE8", FontWeight.Bold));
+        _main.Children.Add(Label("STEP 2 OF 2  /  LEARNING PATH", 15, "#55DCE8", FontWeight.Bold));
+        _main.Children.Add(Label("Linux PrivEsc Techniques", 24, "#F1F5F9", FontWeight.SemiBold));
+        _main.Children.Add(Label("01  Linux Fundamentals", 16, "#F2F6FC"));
+        _main.Children.Add(Label("02  Sudo Misconfigurations", 16, "#F2F6FC"));
+        _main.Children.Add(Label("03  SUID Exploitation", 16, "#F2F6FC"));
+        _main.Children.Add(Label("04  Cron Jobs", 16, "#F2F6FC"));
+        _main.Children.Add(Label("05  Linux Capabilities", 16, "#F2F6FC"));
+        _main.Children.Add(Label("Lesson content and completion checks are not yet implemented.", 12, "#E8B65B"));
+        var back = new Button { Content = "< Back to Lab Setup", Padding = new Thickness(18, 10) };
+        back.Click += (_, _) => ShowSetup();
+        _main.Children.Add(back);
+    }
+
+    private void ShowSetup()
+    {
+        // Reconstruct the setup view only after navigation is enabled in a future release.
+        _status.Text = "Return to Lab Setup will be enabled with the validated navigation flow.";
     }
 
     private static TextBlock Label(string value, double size, string color, FontWeight weight = FontWeight.Normal) =>
