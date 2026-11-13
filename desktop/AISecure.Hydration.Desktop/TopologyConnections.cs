@@ -51,15 +51,12 @@ public sealed class TopologyConnections : Control
         var x2 = network.Value.X;
         var x3 = victim.Value.X;
         context.DrawLine(cyan, new Point(x1, attacker.Value.Y), new Point(x1, busY));
-        context.DrawLine(cyan, new Point(x2, network.Value.Y), new Point(x2, busY));
         context.DrawLine(cyan, new Point(x3, victim.Value.Y), new Point(x3, busY));
         context.DrawLine(cyan, new Point(x1, busY), new Point(x3, busY));
-        // Route through an orthogonal elbow to avoid the slightly tilted
-        // vertical stem when the network and hypervisor centers differ.
-        var trunkX = hypervisorTop.Value.X;
-        if (Math.Abs(x2 - trunkX) > 0.5)
-            context.DrawLine(cyan, new Point(x2, busY), new Point(trunkX, busY));
-        context.DrawLine(cyan, new Point(trunkX, busY), hypervisorTop.Value);
+        // Draw one uninterrupted vertical stroke on the network centerline.
+        // It passes through the horizontal bus and reaches the hypervisor.
+        context.DrawLine(cyan, new Point(x2, network.Value.Y),
+            new Point(x2, hypervisorTop.Value.Y));
 
         // The lower link is part of the same overlay, so it cannot drift on resize.
         context.DrawLine(green, hypervisorBottom.Value, hostTop.Value);
