@@ -441,7 +441,13 @@ public sealed class MainWindow : Window
         stepLabel.HorizontalAlignment = HorizontalAlignment.Center;
         _page.Children.Add(stepLabel);
     }
-    private void Section(string title) => _page.Children.Add(Txt(title, 16, Accent, FontWeight.Bold));
+    private void Section(string title)
+    {
+        var heading = Txt(title, 16, Accent, FontWeight.Bold);
+        heading.HorizontalAlignment = HorizontalAlignment.Center;
+        heading.TextAlignment = TextAlignment.Center;
+        _page.Children.Add(heading);
+    }
 
     private static Control VmDetails(string details)
     {
@@ -550,8 +556,8 @@ public sealed class MainWindow : Window
 
         var overviewTile = Tile(overview);
         overviewTile.Padding = new Thickness(16, 15);
-        overviewTile.Width = 1450;
-        overviewTile.MaxWidth = 1490;
+        overviewTile.Width = 1750;
+        overviewTile.MaxWidth = 1790;
         overviewTile.HorizontalAlignment = HorizontalAlignment.Center;
         _page.Children.Add(overviewTile);
 
@@ -960,7 +966,7 @@ public sealed class MainWindow : Window
             Background = Paint("#0D1E2D"), CornerRadius = new CornerRadius(18),
             BorderBrush = Paint("#35566B"), BorderThickness = new Thickness(1),
             Padding = new Thickness(9), Child = topology,
-            Width = 1450, MaxWidth = 1490, HorizontalAlignment = HorizontalAlignment.Center
+            Width = 1750, MaxWidth = 1790, HorizontalAlignment = HorizontalAlignment.Center
         };
         _page.Children.Add(architecturePanel);
 
@@ -1025,12 +1031,11 @@ public sealed class MainWindow : Window
         var openStorageRoot = Button("Open Hydration Kit Root", () => OpenStoragePath(storageRoot));
         isoLocation.Children.Add(openStorageRoot);
         var isoStorageTile = Tile(isoLocation, "#122432");
-        isoStorageTile.Width = 1450;
-        isoStorageTile.MaxWidth = 1490;
+        isoStorageTile.Width = 1750;
+        isoStorageTile.MaxWidth = 1790;
         isoStorageTile.HorizontalAlignment = HorizontalAlignment.Center;
         _page.Children.Add(isoStorageTile);
 
-        _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
         var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*"), Margin = new Thickness(0, 20, 0, 12) };
         var nextInfo = Txt("STEP 2 OF 2  /  LEARNING PATH  -  Available after lab validation", 12, Muted);
@@ -2011,10 +2016,10 @@ public sealed class MainWindow : Window
     {
         Data = Geometry.Parse("M 1 1 L 11 11 L 1 21"),
         Stroke = Paint("#45C8E8"),
-        StrokeThickness = 2.8,
+        StrokeThickness = 2.6,
         StrokeLineCap = PenLineCap.Round,
-        Width = 10,
-        Height = 18,
+        Width = 8,
+        Height = 15,
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center
     };
