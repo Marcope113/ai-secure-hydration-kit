@@ -6,16 +6,17 @@ No guest OS installation or intentionally vulnerable settings in this release.
 #>
 [CmdletBinding()]
 param(
- [ValidateSet('Check','Install','CreateVM','PrepareMedia','Status','Version')]
+ [ValidateSet('Check','Install','CreateVM','PrepareMedia','SelectAttacker','Status','Version')]
  [string]$Action='Check'
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$Version='0.3.6-preview'
+$Version='0.3.7-preview'
 $Root=Join-Path $env:LOCALAPPDATA 'AISecureAcademy'
 $Manifest=Join-Path $Root 'hydration-state.json'
 $VMManifest=Join-Path $Root 'hydration-v02.json'
 $MediaManifest=Join-Path $Root 'debian-media.json'
+$AttackerManifest=Join-Path $Root 'attacker-selection.json'
 $VMName='AISecure-Linux-PrivEsc-Dev'
 $VBox=Join-Path $env:ProgramFiles 'Oracle\VirtualBox\VBoxManage.exe'
 $IsoName='debian-13.7.0-amd64-netinst.iso'
@@ -31,7 +32,9 @@ function Show-Banner {
  Write-Host '  -------------------------------------------------------------' -ForegroundColor DarkGray
  Show-Line 'LAB' 'Linux Privilege Escalation'
  Show-Line 'LAB ID' 'linux-privesc'
- Show-Line 'VIRTUAL MACHINE' $VMName
+ Show-Line 'TARGET VM' $VMName
+ $attacker=Read-Json $AttackerManifest
+ Show-Line 'ATTACKER OS' $(if($attacker){$attacker.distribution.ToUpperInvariant()}else{'NOT SELECTED'}) ([bool]$attacker)
  Show-Line 'DATE / TIME' $now
  Show-Line 'RELEASE' $Version
  Show-Line 'OPERATION' $Action.ToUpperInvariant()
@@ -132,15 +135,43 @@ try{
    Show-Line 'VM scaffold' $(if($vmState -and $vmState.stage -eq 'vm-scaffold-ready'){'READY'}else{'NOT READY'}) ([bool]($vmState -and $vmState.stage -eq 'vm-scaffold-ready'))
    Show-Line 'Debian media' $(if($mediaState -and $mediaState.status -eq 'iso-attached-not-installed'){'ATTACHED'}else{'NOT RECORDED'}) ([bool]($mediaState -and $mediaState.status -eq 'iso-attached-not-installed'))
    Show-Line 'Guest OS' 'NOT VERIFIED / INSTALL PENDING' $false
+   $attacker=Read-Json $AttackerManifest
+   Show-Line 'Attacker selection' $(if($attacker){$attacker.distribution.ToUpperInvariant()}else{'NOT SELECTED'}) ([bool]$attacker)
+   Show-Line 'Attacker VM' 'NOT INSTALLED' $false
    Write-Host 'Diagnostics complete; no changes made.' -ForegroundColor Green
+  }
+  'SelectAttacker' {
+   Step 1 3 'Choosing attacker distribution'
+   Write-Host '  [1] Kali Linux' -ForegroundColor Cyan
+   Write-Host '  [2] Parrot Security OS' -ForegroundColor Cyan
+   $choice=Read-Host '  Select 1 or 2'
+   if($choice -notin @('1','2')){throw 'Invalid selection. Choose 1 or 2.'}
+   $distro=if($choice -eq '1'){'kali'}else{'parrot'}
+   Step 2 3 'Reviewing existing selection'
+   $old=Read-Json $AttackerManifest
+   if($old -and $old.distribution -eq $distro){
+    Write-Host "  $distro already selected. No changes needed." -ForegroundColor Green
+    break
+   }
+   if($old){Write-Warning "Current selection: $($old.distribution)."}
+   if(-not (Confirm "Save $distro as the attacker OS?")){break}
+   Step 3 3 'Saving attacker preference'
+   Save-Json $AttackerManifest ([ordered]@{
+    schemaVersion=1;labId='linux-privesc';role='attacker'
+    distribution=$distro;stage='selected-not-downloaded'
+    network='aisecurelab';selectedAt=(Get-Date).ToString('o')
+   })
+   Write-Host "  Attacker selected: $distro" -ForegroundColor Green
+   Write-Host '  No ISO downloaded or VM created. Download and installation are not implemented yet.' -ForegroundColor Yellow
   }
   'Status' {
    Step 1 3 'Reading host installation state'
    if(Test-Path $Manifest){Get-Content $Manifest -Raw}else{Write-Host 'No host state.'}
    Step 2 3 'Reading VM state'
    if(Test-Path $VMManifest){Get-Content $VMManifest -Raw}else{Write-Host 'No VM state.'}
-   Step 3 3 'Reading Debian media state'
+   Step 3 3 'Reading Debian media and attacker state'
    if(Test-Path $MediaManifest){Get-Content $MediaManifest -Raw}else{Write-Host 'No media state.'}
+   if(Test-Path $AttackerManifest){Get-Content $AttackerManifest -Raw}else{Write-Host 'No attacker selected.'}
   }
   'Install' {
    Step 1 3 'Checking system requirements'
