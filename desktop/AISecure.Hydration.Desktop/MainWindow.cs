@@ -270,6 +270,16 @@ public sealed class MainWindow : Window
         return Path.Combine(root, "downloads", "isos");
     }
 
+    private void OpenStoragePath(string path)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex) { _activity.Text = "Cannot open folder: " + ex.Message; }
+    }
+
     private void OpenIsoFolder()
     {
         try
@@ -759,8 +769,35 @@ public sealed class MainWindow : Window
         isoLabel.VerticalAlignment = VerticalAlignment.Center;
         isoHeader.Children.Add(isoLabel);
         isoLocation.Children.Add(isoHeader);
-        isoLocation.Children.Add(Txt(_isoRoot, 13, Text));
-        isoLocation.Children.Add(Button("Open ISO Folder", OpenIsoFolder));
+        var storageRoot = Path.GetDirectoryName(Path.GetDirectoryName(_isoRoot)!)!;
+        var extractionRoot = Path.Combine(_root, "virtual-machines", "kali");
+        var storageTree = Stack(3);
+        storageTree.Children.Add(Txt("STORAGE LOCATIONS", 11, Accent, FontWeight.Bold));
+        void AddStoragePath(string prefix, string label, string path)
+        {
+            var entry = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+            var display = Txt(prefix + " " + label + "   " + path, 12, Muted);
+            display.VerticalAlignment = VerticalAlignment.Center;
+            entry.Children.Add(display);
+            var open = Button("Open", () => OpenStoragePath(path));
+            open.Padding = new Thickness(10, 4);
+            Grid.SetColumn(open, 1);
+            entry.Children.Add(open);
+            storageTree.Children.Add(entry);
+        }
+        AddStoragePath("▣", "HYDRATION KIT ROOT", storageRoot);
+        AddStoragePath("├─", "DOWNLOADS / ISOS", _isoRoot);
+        AddStoragePath("├─", "EXTRACTED VMS", extractionRoot);
+        var temporaryRoot = Path.Combine(_root, "virtual-machines");
+        AddStoragePath("└─", "VM WORKSPACE / TEMPORARY", temporaryRoot);
+        var extractedSessions = Directory.Exists(extractionRoot)
+            ? Directory.GetDirectories(extractionRoot).OrderByDescending(p => p).Take(5).ToArray()
+            : Array.Empty<string>();
+        foreach (var session in extractedSessions)
+            AddStoragePath("   └─", Path.GetFileName(session), session);
+        isoLocation.Children.Add(storageTree);
+        var openStorageRoot = Button("Open Hydration Kit Root", () => OpenStoragePath(storageRoot));
+        isoLocation.Children.Add(openStorageRoot);
         _page.Children.Add(Tile(isoLocation, "#122432"));
 
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
