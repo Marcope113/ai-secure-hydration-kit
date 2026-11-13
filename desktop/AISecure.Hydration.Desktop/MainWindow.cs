@@ -375,7 +375,8 @@ public sealed class MainWindow : Window
         body.Children.Add(Txt(state, 13, color, FontWeight.Bold));
         body.Children.Add(Txt(details, 14, Muted));
         if (action is not null) body.Children.Add(action);
-        return Tile(body);
+        // Inner VM content should not have its own outline; the outer VM tile owns it.
+        return new Border { Background = Brushes.Transparent, Padding = new Thickness(19), Child = body };
     }
 
     private void ShowSetup()
