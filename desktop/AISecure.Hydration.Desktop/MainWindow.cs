@@ -104,6 +104,51 @@ public sealed class MainWindow : Window
         catch { return null; }
     }
 
+    private int ReadVmRam(string role, int fallback)
+    {
+        try
+        {
+            var file = Path.Combine(_root, "vm-resources.json");
+            if (!File.Exists(file)) return fallback;
+            using var doc = JsonDocument.Parse(File.ReadAllText(file));
+            return doc.RootElement.TryGetProperty(role, out var ram)
+                && ram.TryGetInt32(out var value) && value is 1024 or 2048 or 4096 or 8192
+                ? value : fallback;
+        }
+        catch { return fallback; }
+    }
+
+    private void SaveVmRam(string role, int ram)
+    {
+        try
+        {
+            Directory.CreateDirectory(_root);
+            var attacker = role == "attacker" ? ram : ReadVmRam("attacker", 4096);
+            var target = role == "target" ? ram : ReadVmRam("target", 2048);
+            File.WriteAllText(Path.Combine(_root, "vm-resources.json"),
+                JsonSerializer.Serialize(new { attacker, target }));
+            _activity.Text = $"Saved planned VM RAM: Kali {attacker / 1024} GB, Debian {target / 1024} GB. Not applied to VirtualBox yet.";
+        }
+        catch (Exception ex) { _activity.Text = "Could not save VM RAM: " + ex.Message; }
+    }
+
+    private Control VmRamPicker(string role, int fallback)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        var label = Txt("PLANNED RAM", 12, Muted, FontWeight.SemiBold);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        row.Children.Add(label);
+        var options = new[] { "1 GB", "2 GB", "4 GB", "8 GB" };
+        var selected = ReadVmRam(role, fallback);
+        var picker = new ComboBox { ItemsSource = options, SelectedIndex = Array.IndexOf(new[] { 1024, 2048, 4096, 8192 }, selected), MinWidth = 100 };
+        picker.SelectionChanged += (_, _) =>
+        {
+            if (picker.SelectedIndex >= 0) SaveVmRam(role, new[] { 1024, 2048, 4096, 8192 }[picker.SelectedIndex]);
+        };
+        row.Children.Add(picker);
+        return row;
+    }
+
     private static string ResolveIsoDirectory()
     {
         var configured = Environment.GetEnvironmentVariable("AISECURE_KIT_ROOT");
@@ -208,6 +253,7 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("NOT INSTALLED", 13, Yellow, FontWeight.Bold));
         attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
+        attackerBody.Children.Add(VmRamPicker("attacker", 4096));
         attackerBody.Children.Add(attackerControls);
         var attacker = Tile(attackerBody);
         Grid.SetColumn(attacker, 0); network.Children.Add(attacker);
@@ -235,10 +281,13 @@ public sealed class MainWindow : Window
             Child = link
         };
         Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
+        var targetActions = Stack(9);
+        targetActions.Children.Add(VmRamPicker("target", 2048));
+        targetActions.Children.Add(TargetControls());
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
             "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
-            TargetControls());
+            targetActions);
         Grid.SetColumn(target, 2); network.Children.Add(target);
         AddLayer(LayerLabel("LAYER 03", "Virtual Machines", "Guests and isolated network", Yellow), network, 0);
 
