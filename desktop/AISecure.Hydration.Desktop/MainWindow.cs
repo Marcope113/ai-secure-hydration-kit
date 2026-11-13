@@ -355,7 +355,12 @@ public sealed class MainWindow : Window
     private Border Machine(string symbol, string role, string name, string state, string color, string details, Control? action = null, Control? titleOverride = null)
     {
         var body = Stack(4);
-        body.Children.Add(Txt(symbol + "   " + role, 15, color, FontWeight.Bold));
+        var roleHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+        roleHeader.Children.Add(new IsometricLabIcon { Kind = "server" });
+        var roleLabel = Txt(role, 15, color, FontWeight.Bold);
+        roleLabel.VerticalAlignment = VerticalAlignment.Center;
+        roleHeader.Children.Add(roleLabel);
+        body.Children.Add(roleHeader);
         body.Children.Add(titleOverride ?? Txt(name, 22, Text, FontWeight.SemiBold));
         body.Children.Add(Txt(state, 13, color, FontWeight.Bold));
         body.Children.Add(Txt(details, 14, Muted));
@@ -425,7 +430,11 @@ public sealed class MainWindow : Window
         attackerControls.Children.Add(attackerActions);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        var attackerRole = Txt("▣   ATTACKER", 15, Yellow, FontWeight.Bold);
+        var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+        attackerRole.Children.Add(new IsometricLabIcon { Kind = "computer" });
+        var attackerRoleLabel = Txt("ATTACKER", 15, Yellow, FontWeight.Bold);
+        attackerRoleLabel.VerticalAlignment = VerticalAlignment.Center;
+        attackerRole.Children.Add(attackerRoleLabel);
         Grid.SetColumn(attackerRole, 0);
         attackerHeader.Children.Add(attackerRole);
         _distro.HorizontalAlignment = HorizontalAlignment.Right;
@@ -461,6 +470,8 @@ public sealed class MainWindow : Window
         networkType.TextAlignment = TextAlignment.Center;
         var networkArrow = Txt("<------>", 20, Accent, FontWeight.Bold);
         networkArrow.TextAlignment = TextAlignment.Center;
+        var networkIcon = new IsometricLabIcon { Kind = "network", HorizontalAlignment = HorizontalAlignment.Center };
+        link.Children.Add(networkIcon);
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
