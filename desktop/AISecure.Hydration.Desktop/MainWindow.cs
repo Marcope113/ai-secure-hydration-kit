@@ -516,6 +516,22 @@ public sealed class MainWindow : Window
         _next.FontWeight = FontWeight.SemiBold;
         Grid.SetColumn(_next, 1);
         footer.Children.Add(_next);
+        var exitButton = Button("Exit", Close);
+        exitButton.HorizontalAlignment = HorizontalAlignment.Right;
+        exitButton.VerticalAlignment = VerticalAlignment.Center;
+        exitButton.Margin = new Thickness(0, 0, 12, 0);
+        Grid.SetColumn(exitButton, 1);
+        // Put Exit before Next in a right-aligned horizontal action group.
+        var footerActions = new StackPanel {
+            Orientation = Orientation.Horizontal,
+            Spacing = 10,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        footer.Children.Remove(_next);
+        footerActions.Children.Add(exitButton);
+        footerActions.Children.Add(_next);
+        Grid.SetColumn(footerActions, 1);
+        footer.Children.Add(footerActions);
         _page.Children.Add(footer);
     }
 
