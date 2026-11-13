@@ -573,7 +573,7 @@ public sealed class MainWindow : Window
         attackerBody.Margin = new Thickness(10, 0, 0, 0);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
-        attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Kali Linux (not installed)", 14, Muted));
+        attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Kali Linux (not installed)\nUSER:PASS   kali:kali (default image)", 14, Muted));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -648,7 +648,7 @@ public sealed class MainWindow : Window
         targetActions.Children.Add(TargetControls(hypervisorReady));
         var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
-            "IP ADDRESS   10.4.4.20 (not configured)\nOS VERSION   Debian 13 (not installed)",
+            "IP ADDRESS   10.4.4.20 (not configured)\nOS VERSION   Debian 13 (not installed)\nUSER:PASS   Set during installation",
             targetActions);
         target.Padding = new Thickness(10, 0, 0, 0);
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
