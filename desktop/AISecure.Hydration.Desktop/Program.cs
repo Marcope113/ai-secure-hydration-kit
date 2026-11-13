@@ -16,6 +16,15 @@ internal static class Program
         {
             Console.Error.WriteLine("HYDRATION DESKTOP STARTUP ERROR:");
             Console.Error.WriteLine(ex.ToString());
+            try
+            {
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AISecureAcademy", "logs");
+                Directory.CreateDirectory(dir);
+                var file = Path.Combine(dir, "desktop-startup.log");
+                File.AppendAllText(file, $"{DateTimeOffset.Now:o} {ex}{Environment.NewLine}");
+                Console.Error.WriteLine("Log: " + file);
+            }
+            catch (Exception logError) { Console.Error.WriteLine("Could not write log: " + logError.Message); }
             return 1;
         }
     }
