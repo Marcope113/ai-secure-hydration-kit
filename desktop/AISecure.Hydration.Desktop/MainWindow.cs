@@ -851,18 +851,53 @@ public sealed class MainWindow : Window
         try
         {
             var workspace = Path.Combine(_root, "virtual-machines", "kali");
-            Directory.CreateDirectory(workspace);
-            // Never overwrite existing virtual disks: they may belong to a running VM.
-            var configsAlreadyThere = Directory.GetFiles(workspace, "*.vbox", SearchOption.AllDirectories);
-            var disksAlreadyThere = Directory.GetFiles(workspace, "*.vdi", SearchOption.AllDirectories);
-            var reuseExtraction = configsAlreadyThere.Length == 1 && disksAlreadyThere.Length > 0;
-            if (!reuseExtraction && (configsAlreadyThere.Length > 0 || disksAlreadyThere.Length > 0))
-                throw new InvalidOperationException("Partial Kali extraction detected. Existing VM files were preserved. Move or inspect the Kali workspace before retrying.");
-            _attackerProgressText.Text = reuseExtraction
-                ? "Existing Kali VM files detected - checking registration..."
-                : "Extracting Kali archive (working)...";
-            if (!reuseExtraction)
+            // This is an application-owned workspace. Never remove files of a
+            // registered VM, including one that is currently powered off.
+            if (Directory.Exists(workspace))
             {
+                var list = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                list.ArgumentList.Add("list");
+                list.ArgumentList.Add("vms");
+                list.ArgumentList.Add("--long");
+                using var registered = Process.Start(list)
+                    ?? throw new InvalidOperationException("Cannot inspect registered VirtualBox VMs.");
+                var vmOutputTask = registered.StandardOutput.ReadToEndAsync();
+                var vmErrorTask = registered.StandardError.ReadToEndAsync();
+                await registered.WaitForExitAsync();
+                var vmOutput = await vmOutputTask;
+                var vmError = await vmErrorTask;
+                if (registered.ExitCode != 0)
+                    throw new InvalidOperationException("Cannot verify existing VMs: " + vmError);
+                if (vmOutput.Contains(workspace, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Kali workspace belongs to a registered VirtualBox VM. Unregister it safely before reinstalling.");
+                Directory.Delete(workspace, recursive: true);
+            }
+            Directory.CreateDirectory(workspace);
+            _attackerProgressText.Text = "Extracting Kali archive...";
+            // Read archive member names to estimate extraction progress by
+            // completed files. This is an estimate, not a byte-accurate percent.
+            var listArchive = new ProcessStartInfo("tar.exe") {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            listArchive.ArgumentList.Add("-tf");
+            listArchive.ArgumentList.Add(_verifiedKaliPath);
+            using var archiveListing = Process.Start(listArchive)
+                ?? throw new InvalidOperationException("Cannot list Kali archive.");
+            var listingTask = archiveListing.StandardOutput.ReadToEndAsync();
+            var listingErrorTask = archiveListing.StandardError.ReadToEndAsync();
+            await archiveListing.WaitForExitAsync();
+            var listingOutput = await listingTask;
+            var listingError = await listingErrorTask;
+            if (archiveListing.ExitCode != 0)
+                throw new InvalidOperationException("Cannot inspect Kali archive: " + listingError);
+            var members = listingOutput.Split(new[] { '\\r', '\\n' },
+                StringSplitOptions.RemoveEmptyEntries)
+                .Where(p => !p.EndsWith("/") && !p.EndsWith("\\\\"))
+                .ToArray();
             var extraction = new ProcessStartInfo("tar.exe") {
                 UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardError = true, RedirectStandardOutput = true
@@ -871,16 +906,34 @@ public sealed class MainWindow : Window
             extraction.ArgumentList.Add(_verifiedKaliPath);
             extraction.ArgumentList.Add("-C");
             extraction.ArgumentList.Add(workspace);
-            using (var process = Process.Start(extraction) ?? throw new InvalidOperationException("Cannot start tar.exe"))
+            _attackerProgress.IsIndeterminate = members.Length == 0;
+            using (var process = Process.Start(extraction)
+                ?? throw new InvalidOperationException("Cannot start tar.exe"))
             {
                 var stdout = process.StandardOutput.ReadToEndAsync();
                 var stderr = process.StandardError.ReadToEndAsync();
+                while (!process.HasExited)
+                {
+                    if (members.Length > 0)
+                    {
+                        var completed = members.Count(member =>
+                        {
+                            var relative = member.Replace('/', Path.DirectorySeparatorChar);
+                            var full = Path.GetFullPath(Path.Combine(workspace, relative));
+                            return full.StartsWith(Path.GetFullPath(workspace) + Path.DirectorySeparatorChar,
+                                StringComparison.OrdinalIgnoreCase) && File.Exists(full);
+                        });
+                        var percent = Math.Min(69, completed * 70d / members.Length);
+                        _attackerProgress.Value = percent;
+                        _attackerProgressText.Text = $"Extracting Kali (approx. {percent:F0}%)...";
+                    }
+                    await Task.WhenAny(process.WaitForExitAsync(), Task.Delay(500));
+                }
                 await process.WaitForExitAsync();
                 var error = await stderr;
                 await stdout;
                 if (process.ExitCode != 0)
-                    throw new InvalidOperationException("Extraction failed. Windows tar may not support 7z: " + error);
-            }
+                    throw new InvalidOperationException("Kali extraction failed: " + error);
             }
             _attackerProgress.IsIndeterminate = false;
             _attackerProgress.Value = 70;
