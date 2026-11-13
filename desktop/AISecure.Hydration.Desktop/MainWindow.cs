@@ -447,9 +447,12 @@ public sealed class MainWindow : Window
         {
             var separator = line.IndexOf("   ", StringComparison.Ordinal);
             if (separator < 0) { rows.Children.Add(Txt(line, 13, Muted)); continue; }
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 9 };
-            row.Children.Add(Txt(line[..separator], 13, Accent, FontWeight.Bold));
-            row.Children.Add(Txt(line[(separator + 3)..].Trim(), 13, Muted));
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("94,*"), ColumnSpacing = 8 };
+            var key = Txt(line[..separator], 13, Accent, FontWeight.Bold);
+            var value = Txt(line[(separator + 3)..].Trim(), 13, Muted);
+            Grid.SetColumn(value, 1);
+            row.Children.Add(key);
+            row.Children.Add(value);
             rows.Children.Add(row);
         }
         return rows;
@@ -673,7 +676,7 @@ public sealed class MainWindow : Window
         _kaliRuntimeLabel = Txt(_kaliRunning ? "● ONLINE" : "● OFFLINE",
             13, _kaliRunning ? Green : Yellow, FontWeight.Bold);
         attackerBody.Children.Add(_kaliRuntimeLabel);
-        attackerBody.Children.Add(VmDetails("IP ADDRESS   " + (_kaliIpVerified && _kaliDhcpAddress is not null ? _kaliDhcpAddress + " (DHCP verified)" : "DHCP pending") + "\nOS VERSION   " + (_kaliConfigured ? "Kali Linux (VM registered)" : "Kali Linux (not installed)") + "\nUSER:PASS   kali:kali"));
+        attackerBody.Children.Add(VmDetails("IP ADDRESS   10.4.4.100\nOS VERSION   Kali Linux\nUSER:PASS   kali:kali"));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -776,7 +779,7 @@ public sealed class MainWindow : Window
         targetActions.Children.Add(TargetControls(hypervisorReady));
         var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE", Yellow,
-            "IP ADDRESS   10.4.4.20 (not configured)\nOS VERSION   Debian 13 (not installed)\nUSER:PASS   Set during installation",
+            "IP ADDRESS   10.4.4.101\nOS VERSION   Debian 13\nUSER:PASS   debian:debian",
             targetActions);
         target.Padding = new Thickness(10, 0, 0, 0);
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
