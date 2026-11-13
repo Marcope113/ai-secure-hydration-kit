@@ -26,6 +26,8 @@ public sealed class MainWindow : Window
     private bool _downloadingDebian;
     private double _kaliPercent;
     private double _debianPercent;
+    private Button? _kaliDownloadButton;
+    private Button? _debianDownloadButton;
     private string? _kaliSha256;
     private TextBlock? _kaliHashLabel;
     private string _kaliStatus = "Waiting to download";
@@ -463,6 +465,7 @@ public sealed class MainWindow : Window
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         var getKali = Button("Get Kali Image", () => _ = DownloadLabImageAsync("kali"));
         getKali.IsEnabled = hypervisorReady && !_downloadingKali;
+        _kaliDownloadButton = getKali;
         attackerActions.Children.Add(getKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         attackerActions.Children.Add(PendingInstall("Install Attacker"));
@@ -775,7 +778,9 @@ public sealed class MainWindow : Window
             else { _debianStatus = message; _debianPercent = percent; }
             SetInstallationProgress(kali ? "Attacker" : "Target", message, percent);
         }
-        Status("Finding official image...", 0);
+        var actionButton = kali ? _kaliDownloadButton : _debianDownloadButton;
+        if (actionButton is not null) actionButton.IsEnabled = false;
+        Status("Checking latest official image...", 0);
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
@@ -803,6 +808,49 @@ public sealed class MainWindow : Window
             Directory.CreateDirectory(_isoRoot);
             var destination = Path.Combine(_isoRoot, filename);
             var temporary = destination + ".part";
+            // Fetch the publisher checksum manifest and verify a matching local file.
+            var manifest = await http.GetStringAsync(new Uri(directory, "SHA256SUMS"));
+            var expected = System.Text.RegularExpressions.Regex.Matches(manifest,
+                    @"(?im)^([a-f0-9]{64})\\s+\\*?(.+?)\\s*$")
+                .Cast<System.Text.RegularExpressions.Match>()
+                .FirstOrDefault(m => Path.GetFileName(m.Groups[2].Value.Trim().TrimStart('*')) == filename)
+                ?.Groups[1].Value.ToLowerInvariant();
+            if (expected is null)
+                throw new InvalidOperationException("Official SHA-256 checksum unavailable for " + filename);
+            async Task<string> HashFile(string path)
+            {
+                await using var file = File.OpenRead(path);
+                return Convert.ToHexString(await SHA256.HashDataAsync(file)).ToLowerInvariant();
+            }
+            void Verified(string actual)
+            {
+                if (kali)
+                {
+                    _kaliSha256 = actual;
+                    if (_kaliHashLabel is not null)
+                    {
+                        _kaliHashLabel.Text = "SHA-256 verified: " + actual[..16] + "…";
+                        ToolTip.SetTip(_kaliHashLabel, actual);
+                    }
+                }
+                Status("Download verified - waiting to install", 100);
+                if (actionButton is not null)
+                {
+                    actionButton.Content = kali ? "Kali image downloaded" : "Debian ISO downloaded";
+                    actionButton.BorderBrush = Paint(Green);
+                }
+            }
+            if (File.Exists(destination))
+            {
+                Status("Verifying existing image...", 0);
+                var existingHash = await HashFile(destination);
+                if (string.Equals(existingHash, expected, StringComparison.OrdinalIgnoreCase))
+                {
+                    Verified(existingHash);
+                    return;
+                }
+                Status("Existing image differs from official SHA-256; downloading...", 0);
+            }
             Status("Downloading 0%", 0);
             using var response = await http.GetAsync(source, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
@@ -821,21 +869,15 @@ public sealed class MainWindow : Window
                     Status(length > 0 ? $"Downloading {percent:F0}%" : $"Downloading {received / 1048576d:F0} MB", percent);
                 }
             }
-            // A complete transfer is not the same as cryptographic validation.
             File.Move(temporary, destination, true);
-            if (kali)
+            Status("Verifying SHA-256...", 99);
+            var downloadedHash = await HashFile(destination);
+            if (!string.Equals(downloadedHash, expected, StringComparison.OrdinalIgnoreCase))
             {
-                Status("Calculating SHA-256...", 100);
-                await using var downloaded = File.OpenRead(destination);
-                var digest = await SHA256.HashDataAsync(downloaded);
-                _kaliSha256 = Convert.ToHexString(digest).ToLowerInvariant();
-                if (_kaliHashLabel is not null)
-                {
-                    _kaliHashLabel.Text = "SHA-256 (local): " + _kaliSha256[..16] + "…";
-                    ToolTip.SetTip(_kaliHashLabel, _kaliSha256);
-                }
+                File.Delete(destination);
+                throw new InvalidOperationException("SHA-256 mismatch. Download removed for safety.");
             }
-            Status(kali ? "Downloaded - checksum verification pending" : "Debian ISO downloaded - checksum verification pending", 100);
+            Verified(downloadedHash);
         }
         catch (Exception ex)
         {
@@ -844,6 +886,7 @@ public sealed class MainWindow : Window
         finally
         {
             if (kali) _downloadingKali = false; else _downloadingDebian = false;
+            if (actionButton is not null) actionButton.IsEnabled = true;
         }
     }
 
@@ -879,6 +922,7 @@ public sealed class MainWindow : Window
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         var getDebian = Button("Get Debian ISO", () => _ = DownloadLabImageAsync("debian"));
         getDebian.IsEnabled = hypervisorReady && !_downloadingDebian;
+        _debianDownloadButton = getDebian;
         actions.Children.Add(getDebian);
         actions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         actions.Children.Add(PendingInstall("Install Target"));
