@@ -395,7 +395,7 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB ARCHITECTURE");
         var topology = Stack(2);
         topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
-        var layers = Stack(0);
+        var layers = Stack(18);
         Control WithLayer(Control content, string layer, string description)
         {
             var frame = new Grid();
@@ -481,18 +481,10 @@ public sealed class MainWindow : Window
             Padding = new Thickness(9, 9), VerticalAlignment = VerticalAlignment.Center,
             Child = link
         };
-        // Extend the center branch from the network tile to the bottom of the VM row.
+        // Network stays a normal interactive card; the overlay owns every circuit line.
         var networkColumn = new Grid { RowDefinitions = new RowDefinitions("*,Auto,*") };
         Grid.SetRow(linkTile, 1);
         networkColumn.Children.Add(linkTile);
-        var networkStem = new Border {
-            Width = 4, Background = Paint("#59788C"),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Stretch
-        };
-        Grid.SetRow(networkStem, 2);
-        networkColumn.Children.Add(networkStem);
-        RegisterPulse(networkStem);
         Grid.SetColumn(networkColumn, 1);
         network.Children.Add(networkColumn);
         var targetActions = Stack(2);
@@ -520,7 +512,7 @@ public sealed class MainWindow : Window
         Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
         // VM connection remains muted until guests are actually verified.
-        layers.Children.Add(ForkConnector());
+
 
         // The hypervisor is the foundation beneath both guest machines.
         var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -551,7 +543,8 @@ public sealed class MainWindow : Window
             installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(installHypervisor);
         }
-        layers.Children.Add(WithLayer(Tile(foundationInfo, "#20384A"), "LAYER 02", "Hypervisor  /  Virtualization platform"));
+        var foundationTile = WithLayer(Tile(foundationInfo, "#20384A"), "LAYER 02", "Hypervisor  /  Virtualization platform");
+        layers.Children.Add(foundationTile);
         // Physical host is the bottom layer of the topology, beneath VirtualBox.
         // Host hardware and OS are the physical foundation of the VM stack.
         var build = Environment.OSVersion.Version.Build;
@@ -594,9 +587,31 @@ public sealed class MainWindow : Window
         pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(pendingHostChecks);
         // Only confirmed host prerequisites and installed hypervisor turn this link green.
-        layers.Children.Add(CircuitConnector(hypervisorReady && archOk && diskOk && ramOk && logicalProcessors >= 4));
-        layers.Children.Add(WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system"));
-        topology.Children.Add(layers);
+
+        var hostTile = WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system");
+        layers.Children.Add(hostTile);
+        // One overlay draws all connections using live control positions.
+        var circuitOverlay = new TopologyConnections {
+            Attacker = attackerLayer,
+            Network = linkTile,
+            Victim = targetLayer,
+            Hypervisor = foundationTile,
+            Host = hostTile,
+            HypervisorReady = hypervisorReady && archOk && diskOk && ramOk && logicalProcessors >= 4,
+            IsHitTestVisible = false
+        };
+        var circuitLayout = new Grid();
+        circuitLayout.Children.Add(layers);
+        circuitLayout.Children.Add(circuitOverlay);
+        circuitLayout.LayoutUpdated += (_, _) => circuitOverlay.InvalidateVisual();
+        var circuitTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
+        circuitTimer.Tick += (_, _) => {
+            circuitOverlay.Bright = !circuitOverlay.Bright;
+            circuitOverlay.InvalidateVisual();
+        };
+        _circuitTimer = circuitTimer;
+        circuitTimer.Start();
+        topology.Children.Add(circuitLayout);
         var architecturePanel = new Border {
             Background = Paint("#0F2030"), CornerRadius = new CornerRadius(16),
             BorderBrush = Paint("#294153"), BorderThickness = new Thickness(1),
