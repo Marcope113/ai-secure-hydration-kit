@@ -175,7 +175,9 @@ public sealed class MainWindow : Window
         var hypervisorReady = File.Exists(hypervisorPath);
         var foundation = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16 };
         var foundationInfo = Stack(5);
-        foundationInfo.Children.Add(Txt("HYPERVISOR  /  ORACLE VIRTUALBOX", 14, Accent, FontWeight.Bold));
+        var hypervisorTitle = Txt("HYPERVISOR  /  ORACLE VIRTUALBOX", 14, Accent, FontWeight.Bold);
+        hypervisorTitle.TextAlignment = TextAlignment.Center;
+        foundationInfo.Children.Add(hypervisorTitle);
         foundationInfo.Children.Add(Txt("Virtualization layer hosting Attacker + Victim VMs", 13, Muted));
         foundationInfo.Children.Add(Txt(hypervisorReady ? "SUPPORTED  -  INSTALLED" : "NOT INSTALLED  -  REQUIRED FIRST",
             13, hypervisorReady ? Green : Red, FontWeight.Bold));
@@ -199,8 +201,10 @@ public sealed class MainWindow : Window
         var free = drive.AvailableFreeSpace / 1073741824d;
         var diskOk = free >= 35;
         var physicalHost = Stack(10);
-        physicalHost.Children.Add(Txt("HOST MACHINE  /  " +
-            (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription), 15, Accent, FontWeight.Bold));
+        var hostTitle = Txt("HOST MACHINE  /  " +
+            (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription), 15, Accent, FontWeight.Bold);
+        hostTitle.TextAlignment = TextAlignment.Center;
+        physicalHost.Children.Add(hostTitle);
         var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 12 };
         var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
             "Windows 11 x64 is required for this Windows preview.", null);
