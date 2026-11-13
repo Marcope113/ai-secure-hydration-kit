@@ -416,7 +416,7 @@ public sealed class MainWindow : Window
             frame.Children.Add(labels);
             return frame;
         }
-        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6, MinWidth = 1120 };
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
         var attackerControls = Stack(2);
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         attackerActions.Children.Add(Button("Get Kali Image", OpenAttackerIsoPage));
@@ -617,11 +617,7 @@ public sealed class MainWindow : Window
             BorderBrush = Paint("#294153"), BorderThickness = new Thickness(1),
             Padding = new Thickness(11), Child = topology
         };
-        _page.Children.Add(new ScrollViewer {
-            Content = architecturePanel,
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
-        });
+        _page.Children.Add(architecturePanel);
 
         var isoLocation = Stack(7);
         isoLocation.Children.Add(Txt("ISO STORAGE  /  HYDRATION KIT", 13, Accent, FontWeight.Bold));
