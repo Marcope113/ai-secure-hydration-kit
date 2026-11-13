@@ -2003,7 +2003,6 @@ public sealed class MainWindow : Window
         Stroke = Paint("#45C8E8"),
         StrokeThickness = 3.2,
         StrokeLineCap = PenLineCap.Round,
-        StrokeLineJoin = PenLineJoin.Round,
         Width = 13,
         Height = 22,
         HorizontalAlignment = HorizontalAlignment.Center,
