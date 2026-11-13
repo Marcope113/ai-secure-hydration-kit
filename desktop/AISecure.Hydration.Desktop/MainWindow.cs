@@ -177,8 +177,8 @@ public sealed class MainWindow : Window
 
     private Control VmResourceControls(string role)
     {
-        var panel = Stack(3);
-        panel.Width = 150;
+        var panel = Stack(1);
+        panel.Width = 195;
         panel.Children.Add(Txt("VM RESOURCES", 11, Accent, FontWeight.Bold));
         // Course lab limits: deliberately small, predictable VM allocations.
         const int maxRam = 8;
@@ -332,11 +332,11 @@ public sealed class MainWindow : Window
 
     private Border Machine(string symbol, string role, string name, string state, string color, string details, Control? action = null, Control? titleOverride = null)
     {
-        var body = Stack(9);
+        var body = Stack(4);
         body.Children.Add(Txt(symbol + "   " + role, 15, color, FontWeight.Bold));
         body.Children.Add(titleOverride ?? Txt(name, 22, Text, FontWeight.SemiBold));
         body.Children.Add(Txt(state, 13, color, FontWeight.Bold));
-        body.Children.Add(Txt(details, 16, Muted));
+        body.Children.Add(Txt(details, 14, Muted));
         if (action is not null) body.Children.Add(action);
         return Tile(body);
     }
@@ -360,7 +360,7 @@ public sealed class MainWindow : Window
         _next.Click += (_, _) => ShowLessons();
 
         Header("LAB SETUP  /  STEP 1 OF 2");
-        var overview = Stack(4);
+        var overview = Stack(2);
         overview.Children.Add(Txt("Linux PrivEsc Techniques", 23, Text, FontWeight.Bold));
         overview.Children.Add(Txt("Explore how Linux privilege boundaries fail. Enumerate misconfigurations, gain elevated access in an isolated environment, then investigate detection and remediation.", 14, Muted));
         overview.Children.Add(Txt("Kali Linux attacker + Academy Debian vulnerable target, both on VirtualBox.", 13, Accent));
@@ -369,9 +369,9 @@ public sealed class MainWindow : Window
         _page.Children.Add(overviewTile);
 
         Section("VIRTUAL LAB ARCHITECTURE");
-        var topology = Stack(4);
+        var topology = Stack(2);
         topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
-        var layers = Stack(3);
+        var layers = Stack(2);
         Control WithLayer(Control content, string layer, string description)
         {
             var frame = new Grid();
@@ -392,8 +392,8 @@ public sealed class MainWindow : Window
             frame.Children.Add(labels);
             return frame;
         }
-        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("38*,24*,38*"), ColumnSpacing = 8 };
-        var attackerControls = Stack(4);
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("38*,24*,38*"), ColumnSpacing = 6 };
+        var attackerControls = Stack(2);
         attackerControls.Children.Add(Button("Get Kali VirtualBox Image", OpenAttackerIsoPage));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
         var attackerBody = Stack(3);
@@ -407,24 +407,24 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
-        attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
+        attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 14, Muted));
         attackerBody.Children.Add(attackerControls);
-        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150"), ColumnSpacing = 6 };
+        var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
         Grid.SetColumn(attackerBody, 0); attackerLayout.Children.Add(attackerBody);
         var attackerResources = VmResourceControls("attacker");
         attackerResources.Margin = new Thickness(0);
         Grid.SetColumn(attackerResources, 1); attackerLayout.Children.Add(attackerResources);
-        var attackerCard = Stack(2);
+        var attackerCard = Stack(1);
         attackerCard.Children.Add(attackerLayout);
-        var attackerProgressArea = Stack(4);
+        var attackerProgressArea = Stack(2);
         attackerProgressArea.Margin = new Thickness(0);
         attackerProgressArea.Children.Add(_attackerProgressText);
         attackerProgressArea.Children.Add(_attackerProgress);
         attackerCard.Children.Add(attackerProgressArea);
-        var attacker = Tile(attackerCard); attacker.Padding = new Thickness(9);
+        var attacker = Tile(attackerCard); attacker.Padding = new Thickness(7);
         var attackerLayer = WithLayer(attacker, "LAYER 03", "Virtual Machines  /  Attacker");
         Grid.SetColumn(attackerLayer, 0); network.Children.Add(attackerLayer);
-        var link = Stack(5);
+        var link = Stack(3);
         link.VerticalAlignment = VerticalAlignment.Center;
         link.HorizontalAlignment = HorizontalAlignment.Stretch;
         var networkName = Txt("aisecurelab", 13, Text, FontWeight.SemiBold);
@@ -451,26 +451,26 @@ public sealed class MainWindow : Window
             Child = link
         };
         Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
-        var targetActions = Stack(4);
+        var targetActions = Stack(2);
         targetActions.Children.Add(TargetControls());
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
             "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
             targetActions);
         target.Padding = new Thickness(0);
-        var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,175"), ColumnSpacing = 10 };
+        var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
         Grid.SetColumn(target, 0); targetLayout.Children.Add(target);
         var targetResources = VmResourceControls("target");
         targetResources.Margin = new Thickness(0);
         Grid.SetColumn(targetResources, 1); targetLayout.Children.Add(targetResources);
-        var targetCard = Stack(2);
+        var targetCard = Stack(1);
         targetCard.Children.Add(targetLayout);
-        var targetProgressArea = Stack(4);
+        var targetProgressArea = Stack(2);
         targetProgressArea.Margin = new Thickness(0);
         targetProgressArea.Children.Add(_targetProgressText);
         targetProgressArea.Children.Add(_targetProgress);
         targetCard.Children.Add(targetProgressArea);
-        var targetTile = Tile(targetCard); targetTile.Padding = new Thickness(9);
+        var targetTile = Tile(targetCard); targetTile.Padding = new Thickness(7);
         var targetLayer = WithLayer(targetTile, "LAYER 03", "Virtual Machines  /  Victim");
         Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
@@ -481,7 +481,7 @@ public sealed class MainWindow : Window
         var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
             "Oracle", "VirtualBox", "VBoxManage.exe");
         var hypervisorReady = File.Exists(hypervisorPath);
-        var foundationInfo = Stack(3);
+        var foundationInfo = Stack(2);
         foundationInfo.HorizontalAlignment = HorizontalAlignment.Stretch;
         foreach (var line in new[] {
             Txt("HYPERVISOR  /  ORACLE VIRTUALBOX", 16, Accent, FontWeight.Bold),
@@ -516,7 +516,7 @@ public sealed class MainWindow : Window
         var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
         var free = drive.AvailableFreeSpace / 1073741824d;
         var diskOk = free >= 35;
-        var physicalHost = Stack(3);
+        var physicalHost = Stack(2);
         var hostTitle = Txt("HOST MACHINE  /  " +
             (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription), 15, Accent, FontWeight.Bold);
         hostTitle.TextAlignment = TextAlignment.Center;
