@@ -457,6 +457,28 @@ public sealed class MainWindow : Window
         overview.Children.Add(overviewTop);
         overview.Children.Add(Txt("Explore how Linux privilege boundaries fail. Enumerate misconfigurations, gain elevated access in an isolated environment, then investigate detection and remediation.", 14, Muted));
         overview.Children.Add(Txt("Kali Linux attacker + Academy Debian vulnerable target, both on VirtualBox.", 13, Accent));
+        overview.Children.Add(Txt("TECHNIQUES COVERED", 13, Accent, FontWeight.Bold));
+        var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
+        var items = new (string,string)[] {
+            ("01  Linux Enumeration", "Users, processes and permissions"),
+            ("02  Sudo Misconfigurations", "Unsafe delegated privileges"),
+            ("03  SUID Binaries", "Privileged executable paths"),
+            ("04  Cron Jobs", "Scheduled task weaknesses"),
+            ("05  Linux Capabilities", "Granular privilege misuse"),
+            ("06  PATH & Permissions", "Environment and file trust")
+        };
+        for (var i = 0; i < items.Length; i++)
+        {
+            var body = Stack(6);
+            body.Children.Add(Txt(items[i].Item1, 14, Text, FontWeight.SemiBold));
+            body.Children.Add(Txt(items[i].Item2, 12, Muted));
+            var tile = Tile(body);
+            Grid.SetColumn(tile, i % 3); Grid.SetRow(tile, i / 3); techniques.Children.Add(tile);
+        }
+        overview.Children.Add(techniques);
+
+
+
         var overviewTile = Tile(overview);
         overviewTile.Padding = new Thickness(12);
         _page.Children.Add(overviewTile);
@@ -814,27 +836,6 @@ public sealed class MainWindow : Window
 
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
-        Section("TECHNIQUES COVERED");
-        var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
-        var items = new (string,string)[] {
-            ("01  Linux Enumeration", "Users, processes and permissions"),
-            ("02  Sudo Misconfigurations", "Unsafe delegated privileges"),
-            ("03  SUID Binaries", "Privileged executable paths"),
-            ("04  Cron Jobs", "Scheduled task weaknesses"),
-            ("05  Linux Capabilities", "Granular privilege misuse"),
-            ("06  PATH & Permissions", "Environment and file trust")
-        };
-        for (var i = 0; i < items.Length; i++)
-        {
-            var body = Stack(6);
-            body.Children.Add(Txt(items[i].Item1, 14, Text, FontWeight.SemiBold));
-            body.Children.Add(Txt(items[i].Item2, 12, Muted));
-            var tile = Tile(body);
-            Grid.SetColumn(tile, i % 3); Grid.SetRow(tile, i / 3); techniques.Children.Add(tile);
-        }
-        _page.Children.Add(techniques);
-
-
         var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*"), Margin = new Thickness(0, 20, 0, 12) };
         var nextInfo = Txt("STEP 2 OF 2  /  LEARNING PATH  -  Available after lab validation", 12, Muted);
         nextInfo.VerticalAlignment = VerticalAlignment.Center;
@@ -897,8 +898,13 @@ public sealed class MainWindow : Window
 
     private async Task InstallAttackerAsync()
     {
-        if (_installingAttacker || !_kaliVerified || _verifiedKaliPath is null ||
-            !File.Exists(_verifiedKaliPath)) return;
+        if (_installingAttacker) return;
+        if (!_kaliVerified || _verifiedKaliPath is null || !File.Exists(_verifiedKaliPath))
+        {
+            _attackerProgressText.Text = "Kali archive not verified in this session. Recheck the image before installation.";
+            _ = DownloadLabImageAsync("kali");
+            return;
+        }
         var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
             "Oracle", "VirtualBox", "VBoxManage.exe");
         if (!File.Exists(vbox))
