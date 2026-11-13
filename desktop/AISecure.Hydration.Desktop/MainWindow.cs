@@ -65,7 +65,7 @@ public sealed class MainWindow : Window
     private static IBrush Paint(string hex) => new SolidColorBrush(Color.Parse(hex));
     private static TextBlock Txt(string value, double size = 14, string color = Text, FontWeight weight = FontWeight.Normal) =>
         new() { Text = value, FontSize = size, Foreground = Paint(color), FontWeight = weight, TextWrapping = TextWrapping.Wrap };
-    private static Border Tile(Control child, string background = "#172737") =>
+    private static Border Tile(Control child, string background = "#24394D") =>
         new() { Background = Paint(background), CornerRadius = new CornerRadius(12), Padding = new Thickness(19), Child = child };
     private static StackPanel Stack(int gap = 9) => new() { Spacing = gap };
     private static Button Button(string title, Action click)
@@ -200,7 +200,7 @@ public sealed class MainWindow : Window
             Padding = new Thickness(10, 8)
         });
         var linkTile = new Border {
-            Background = Paint("#122432"), CornerRadius = new CornerRadius(10),
+            Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
             Padding = new Thickness(9, 14), VerticalAlignment = VerticalAlignment.Center,
             Child = link
         };
@@ -241,7 +241,7 @@ public sealed class MainWindow : Window
             installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(installHypervisor);
         }
-        AddLayer(LayerLabel("LAYER 02", "Hypervisor", "Virtualization platform", Accent), Tile(foundationInfo, "#122432"), 1);
+        AddLayer(LayerLabel("LAYER 02", "Hypervisor", "Virtualization platform", Accent), Tile(foundationInfo, "#20384A"), 1);
         // Physical host is the bottom layer of the topology, beneath VirtualBox.
         // Host hardware and OS are the physical foundation of the VM stack.
         var build = Environment.OSVersion.Version.Build;
@@ -270,7 +270,7 @@ public sealed class MainWindow : Window
         pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(pendingHostChecks);
         AddLayer(LayerLabel("LAYER 01", "Physical Host", "Hardware and operating system", Muted),
-            Tile(physicalHost, "#101E2C"), 2);
+            Tile(physicalHost, "#1B3042"), 2);
         topology.Children.Add(layers);
         var flowNote = Txt("SETUP FLOW   Host  →  Hypervisor  →  Virtual Machines  →  Network validation", 12, Accent);
         flowNote.TextAlignment = TextAlignment.Center;
