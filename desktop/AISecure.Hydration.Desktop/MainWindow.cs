@@ -28,6 +28,9 @@ public sealed class MainWindow : Window
     private double _debianPercent;
     private Button? _kaliDownloadButton;
     private Button? _debianDownloadButton;
+    private bool _installingAttacker;
+    private Button? _installAttackerButton;
+    private string? _verifiedKaliPath;
     private bool _kaliVerified;
     private bool _debianVerified;
     private string? _debianSha256;
@@ -466,15 +469,20 @@ public sealed class MainWindow : Window
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
         var attackerControls = Stack(2);
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        var getKali = Button("Get Kali Image", () => _ = DownloadLabImageAsync("kali"));
-        getKali.IsEnabled = hypervisorReady && !_downloadingKali && !_kaliVerified;
+        var getKali = Button("Get Kali Image", () => { if (_kaliVerified) OpenIsoFolder(); else _ = DownloadLabImageAsync("kali"); });
+        getKali.IsEnabled = hypervisorReady && !_downloadingKali;
         if (_kaliVerified) { getKali.Content = "Kali downloaded"; getKali.BorderBrush = Paint(Green); }
         _kaliDownloadButton = getKali;
         attackerActions.Children.Add(getKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
-        attackerActions.Children.Add(PendingInstall("Install Attacker"));
+        var installAttacker = Button(_installingAttacker ? "Installing..." : "Install Attacker",
+            () => _ = InstallAttackerAsync());
+        installAttacker.IsEnabled = hypervisorReady && _kaliVerified && !_installingAttacker;
+        _installAttackerButton = installAttacker;
+        attackerActions.Children.Add(installAttacker);
         attackerControls.Children.Add(attackerActions);
-        _kaliHashLabel = Txt(_kaliSha256 is null ? "" : "SHA-256 (local): " + _kaliSha256[..16] + "…", 11, Muted);
+        _kaliHashLabel = Txt(_kaliSha256 is null ? "" : "SHA-256: " + _kaliSha256, 10, Muted);
+        _kaliHashLabel.TextWrapping = TextWrapping.WrapAnywhere;
         if (_kaliSha256 is not null) ToolTip.SetTip(_kaliHashLabel, _kaliSha256);
         attackerControls.Children.Add(_kaliHashLabel);
         var attackerBody = Stack(3);
@@ -834,17 +842,17 @@ public sealed class MainWindow : Window
                     _kaliSha256 = actual;
                     if (_kaliHashLabel is not null)
                     {
-                        _kaliHashLabel.Text = "SHA-256 verified: " + actual[..16] + "…";
+                        _kaliHashLabel.Text = "SHA-256 verified: " + actual;
                         ToolTip.SetTip(_kaliHashLabel, actual);
                     }
                 }
                 if (!kali) { _debianVerified = true; _debianSha256 = actual; }
-                Status(kali ? "Kali image verified - install not yet implemented" :
+                Status(kali ? "Kali image verified - ready to register VM" :
                     "Debian ISO verified - automated installation pending", 100);
                 if (actionButton is not null)
                 {
                     actionButton.Content = kali ? "Kali downloaded" : "Debian downloaded";
-                    actionButton.IsEnabled = false;
+                    actionButton.IsEnabled = true;
                     actionButton.BorderBrush = Paint(Green);
                 }
             }
@@ -854,6 +862,7 @@ public sealed class MainWindow : Window
                 var existingHash = await HashFile(destination);
                 if (string.Equals(existingHash, expected, StringComparison.OrdinalIgnoreCase))
                 {
+                    if (kali) _verifiedKaliPath = destination;
                     Verified(existingHash);
                     return;
                 }
@@ -885,6 +894,7 @@ public sealed class MainWindow : Window
                 File.Delete(destination);
                 throw new InvalidOperationException("SHA-256 mismatch. Download removed for safety.");
             }
+            if (kali) _verifiedKaliPath = destination;
             Verified(downloadedHash);
         }
         catch (Exception ex)
@@ -894,8 +904,9 @@ public sealed class MainWindow : Window
         finally
         {
             if (kali) _downloadingKali = false; else _downloadingDebian = false;
-            if (actionButton is not null)
-                actionButton.IsEnabled = !(kali ? _kaliVerified : _debianVerified);
+            if (actionButton is not null) actionButton.IsEnabled = true;
+            if (kali && _installAttackerButton is not null)
+                _installAttackerButton.IsEnabled = _kaliVerified && !_installingAttacker;
         }
     }
 
@@ -929,8 +940,8 @@ public sealed class MainWindow : Window
     {
         var stack = Stack(3);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        var getDebian = Button("Get Debian ISO", () => _ = DownloadLabImageAsync("debian"));
-        getDebian.IsEnabled = hypervisorReady && !_downloadingDebian && !_debianVerified;
+        var getDebian = Button("Get Debian ISO", () => { if (_debianVerified) OpenIsoFolder(); else _ = DownloadLabImageAsync("debian"); });
+        getDebian.IsEnabled = hypervisorReady && !_downloadingDebian;
         if (_debianVerified) { getDebian.Content = "Debian downloaded"; getDebian.BorderBrush = Paint(Green); }
         _debianDownloadButton = getDebian;
         actions.Children.Add(getDebian);
