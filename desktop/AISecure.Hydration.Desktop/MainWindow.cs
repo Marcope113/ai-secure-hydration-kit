@@ -758,6 +758,90 @@ public sealed class MainWindow : Window
         _page.Children.Add(footer);
     }
 
+    private async Task DownloadLabImageAsync(string kind)
+    {
+        var kali = kind == "kali";
+        if (kali ? _downloadingKali : _downloadingDebian) return;
+        if (kali) _downloadingKali = true; else _downloadingDebian = true;
+        void Status(string message, double percent)
+        {
+            if (kali) { _kaliStatus = message; _kaliPercent = percent; }
+            else { _debianStatus = message; _debianPercent = percent; }
+            SetInstallationProgress(kali ? "Attacker" : "Target", message, percent);
+        }
+        Status("Finding official image...", 0);
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("AISecureAcademy-HydrationKit/1.0");
+            Uri source;
+            if (kali)
+            {
+                // Discover the official VirtualBox archive; Kali versions change regularly.
+                var html = await http.GetStringAsync("https://www.kali.org/get-kali/");
+                var links = System.Text.RegularExpressions.Regex.Matches(html,
+                    @"https?[^""'<>\\s]+?virtualbox[^""'<>\\s]*?\\.7z", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var urls = links.Select(m => System.Net.WebUtility.HtmlDecode(m.Value.Replace("&amp;", "&")))
+                    .Select(u => Uri.TryCreate(u, UriKind.Absolute, out var parsed) ? parsed : null)
+                    .Where(u => u is not null && u.Scheme == Uri.UriSchemeHttps &&
+                        (u.Host == "cdimage.kali.org" || u.Host.EndsWith(".kali.org", StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+                source = urls.FirstOrDefault() ?? throw new InvalidOperationException(
+                    "Official Kali VirtualBox download link not found. No untrusted mirror was used.");
+            }
+            else
+            {
+                // Only the Academy-built vulnerable target is acceptable here.
+                var json = await http.GetStringAsync(
+                    "https://api.github.com/repos/Marcope113/ai-secure-hydration-kit/releases/latest");
+                using var doc = JsonDocument.Parse(json);
+                var assets = doc.RootElement.GetProperty("assets").EnumerateArray();
+                var asset = assets.FirstOrDefault(a => a.GetProperty("name").GetString() is string n &&
+                    n.Contains("debian", StringComparison.OrdinalIgnoreCase) &&
+                    (n.EndsWith(".ova", StringComparison.OrdinalIgnoreCase) ||
+                     n.EndsWith(".7z", StringComparison.OrdinalIgnoreCase)));
+                if (asset.ValueKind == JsonValueKind.Undefined)
+                    throw new InvalidOperationException("Academy Debian VM is not published yet. Download unavailable.");
+                source = new Uri(asset.GetProperty("browser_download_url").GetString()!);
+            }
+            var filename = Uri.UnescapeDataString(source.Segments.Last());
+            if (filename.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                throw new InvalidOperationException("Invalid download filename.");
+            Directory.CreateDirectory(_isoRoot);
+            var destination = Path.Combine(_isoRoot, filename);
+            var temporary = destination + ".part";
+            Status("Downloading 0%", 0);
+            using var response = await http.GetAsync(source, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+            var length = response.Content.Headers.ContentLength;
+            await using (var input = await response.Content.ReadAsStreamAsync())
+            await using (var output = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, true))
+            {
+                var buffer = new byte[1024 * 1024];
+                long received = 0;
+                int count;
+                while ((count = await input.ReadAsync(buffer)) > 0)
+                {
+                    await output.WriteAsync(buffer.AsMemory(0, count));
+                    received += count;
+                    var percent = length > 0 ? Math.Min(99, received * 100d / length.Value) : 0;
+                    Status(length > 0 ? $"Downloading {percent:F0}%" : $"Downloading {received / 1048576d:F0} MB", percent);
+                }
+            }
+            // A complete transfer is not the same as cryptographic validation.
+            File.Move(temporary, destination, true);
+            Status("Downloaded - checksum verification pending", 100);
+        }
+        catch (Exception ex)
+        {
+            Status("Download unavailable: " + ex.Message, 0);
+        }
+        finally
+        {
+            if (kali) _downloadingKali = false; else _downloadingDebian = false;
+        }
+    }
+
     private void OpenAttackerIsoPage()
     {
         // Official prebuilt VirtualBox image; no installer ISO needed.
