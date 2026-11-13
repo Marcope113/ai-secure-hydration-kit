@@ -627,6 +627,15 @@ public sealed class MainWindow : Window
         _next.CornerRadius = new CornerRadius(9);
         _next.FontWeight = FontWeight.SemiBold;
         _next.Classes.Add("academy-next");
+        _next.PropertyChanged += (_, args) =>
+        {
+            if (args.Property == Button.IsEnabledProperty)
+            {
+                _next.Background = Paint(_next.IsEnabled ? "#176B80" : "#142B42");
+                _next.BorderBrush = Paint(_next.IsEnabled ? "#85EAF1" : "#53DCE8");
+                _next.Foreground = Paint(_next.IsEnabled ? "#FFFFFF" : "#A3B5C7");
+            }
+        };
         Grid.SetColumn(_next, 2);
         footer.Children.Add(_next);
         _page.Children.Add(footer);
