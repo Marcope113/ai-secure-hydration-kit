@@ -23,7 +23,21 @@ public sealed class IsometricLabIcon : Control
         void Shape(string path, string color) =>
             context.DrawGeometry(Brush(color), outline, Geometry.Parse(path));
 
-        if (Kind == "network")
+        if (Kind == "tux")
+        {
+            // Stylized Tux: original vector silhouette, independent of emoji fonts.
+            context.DrawEllipse(Brush("#101B2A"), new Pen(Brush("#6CDCEA"), 1.2),
+                new Point(19,19), 12, 15);
+            context.DrawEllipse(Brush("#F2F5F8"), null, new Point(19,23), 7, 9);
+            context.DrawEllipse(Brush("#F2F5F8"), null, new Point(15,10), 2.8, 3);
+            context.DrawEllipse(Brush("#F2F5F8"), null, new Point(23,10), 2.8, 3);
+            context.DrawEllipse(Brush("#172433"), null, new Point(15.5,10.5), 1.1, 1.3);
+            context.DrawEllipse(Brush("#172433"), null, new Point(22.5,10.5), 1.1, 1.3);
+            Shape("M 15,15 L 23,15 L 19,20 Z", "#F2B54D");
+            Shape("M 7,29 L 16,29 L 15,33 L 4,33 Z", "#F2B54D");
+            Shape("M 22,29 L 31,29 L 34,33 L 23,33 Z", "#F2B54D");
+        }
+        else if (Kind == "network")
         {
             // Isometric switch: top, front, right side and three tiny ports.
             Shape("M 4,12 L 21,5 L 35,12 L 18,20 Z", "#2B6C82");
