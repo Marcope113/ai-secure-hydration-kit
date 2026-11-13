@@ -37,6 +37,8 @@ public sealed class MainWindow : Window
     private string? _kaliSha256;
     private TextBlock? _kaliHashLabel;
     private TextBlock? _debianHashLabel;
+    private Button? _attackerCopyButton;
+    private Button? _targetCopyButton;
     private string _kaliStatus = "Waiting to download";
     private string _debianStatus = "Waiting to download";
     private DispatcherTimer? _circuitTimer;
@@ -522,6 +524,7 @@ public sealed class MainWindow : Window
         attackerCopy.Padding = new Thickness(6, 1);
         attackerCopy.FontSize = 10;
         attackerCopy.IsEnabled = _kaliSha256 is not null;
+        _attackerCopyButton = attackerCopy;
         attackerHashActions.Children.Add(attackerCopy);
         Grid.SetColumn(attackerHashActions, 1);
         attackerProgressHeader.Children.Add(attackerHashActions);
@@ -596,6 +599,7 @@ public sealed class MainWindow : Window
         targetCopy.Padding = new Thickness(6, 1);
         targetCopy.FontSize = 10;
         targetCopy.IsEnabled = _debianSha256 is not null;
+        _targetCopyButton = targetCopy;
         targetHashActions.Children.Add(targetCopy);
         Grid.SetColumn(targetHashActions, 1);
         targetProgressHeader.Children.Add(targetHashActions);
@@ -848,7 +852,17 @@ public sealed class MainWindow : Window
         {
             var workspace = Path.Combine(_root, "virtual-machines", "kali");
             Directory.CreateDirectory(workspace);
-            _attackerProgressText.Text = "Extracting Kali archive (working)...";
+            // Never overwrite existing virtual disks: they may belong to a running VM.
+            var configsAlreadyThere = Directory.GetFiles(workspace, "*.vbox", SearchOption.AllDirectories);
+            var disksAlreadyThere = Directory.GetFiles(workspace, "*.vdi", SearchOption.AllDirectories);
+            var reuseExtraction = configsAlreadyThere.Length == 1 && disksAlreadyThere.Length > 0;
+            if (!reuseExtraction && (configsAlreadyThere.Length > 0 || disksAlreadyThere.Length > 0))
+                throw new InvalidOperationException("Partial Kali extraction detected. Existing VM files were preserved. Move or inspect the Kali workspace before retrying.");
+            _attackerProgressText.Text = reuseExtraction
+                ? "Existing Kali VM files detected - checking registration..."
+                : "Extracting Kali archive (working)...";
+            if (!reuseExtraction)
+            {
             var extraction = new ProcessStartInfo("tar.exe") {
                 UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardError = true, RedirectStandardOutput = true
@@ -866,6 +880,7 @@ public sealed class MainWindow : Window
                 await stdout;
                 if (process.ExitCode != 0)
                     throw new InvalidOperationException("Extraction failed. Windows tar may not support 7z: " + error);
+            }
             }
             _attackerProgress.IsIndeterminate = false;
             _attackerProgress.Value = 70;
@@ -993,6 +1008,8 @@ public sealed class MainWindow : Window
                         ToolTip.SetTip(_kaliHashLabel, actual);
                     }
                 }
+                if (kali && _attackerCopyButton is not null) _attackerCopyButton.IsEnabled = true;
+                if (!kali && _targetCopyButton is not null) _targetCopyButton.IsEnabled = true;
                 if (!kali) { _debianVerified = true; _debianSha256 = actual;
                     if (_debianHashLabel is not null) { _debianHashLabel.Text = "SHA-256: " + actual[..12] + "…"; ToolTip.SetTip(_debianHashLabel, actual); }
                 }
