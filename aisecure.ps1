@@ -11,7 +11,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$Version='0.3.4-preview'
+$Version='0.3.5-preview'
 $Root=Join-Path $env:LOCALAPPDATA 'AISecureAcademy'
 $Manifest=Join-Path $Root 'hydration-state.json'
 $VMManifest=Join-Path $Root 'hydration-v02.json'
@@ -25,16 +25,12 @@ function Show-Banner {
  if($Action -eq 'Version'){return}
  $now=Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
  Write-Host ''
- Write-Host '  +================================================================+' -ForegroundColor DarkCyan
- Write-Host '  |                                                                 |' -ForegroundColor DarkCyan
- Write-Host '  |   AI SECURE                                                      |' -ForegroundColor Cyan
- Write-Host '  |   A C A D E M Y                                                  |' -ForegroundColor DarkCyan
- Write-Host '  |                                                                 |' -ForegroundColor DarkCyan
- Write-Host '  |   H Y D R A T I O N   K I T                                      |' -ForegroundColor Magenta
- Write-Host '  |   CYBER LAB PROVISIONING                                        |' -ForegroundColor Gray
- Write-Host '  |                                                                 |' -ForegroundColor DarkCyan
- Write-Host '  +================================================================+' -ForegroundColor DarkCyan
+ Write-Host '  // AI SECURE' -ForegroundColor Cyan
+ Write-Host '     A C A D E M Y' -ForegroundColor DarkCyan
  Write-Host ''
+ Write-Host '  HYDRATION KIT' -ForegroundColor Magenta
+ Write-Host '  CYBER LAB PROVISIONING' -ForegroundColor Gray
+ Write-Host '  -------------------------------------------------------------' -ForegroundColor DarkGray
  Show-Line 'LAB' 'Linux Privilege Escalation'
  Show-Line 'LAB ID' 'linux-privesc'
  Show-Line 'VIRTUAL MACHINE' $VMName
