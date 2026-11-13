@@ -20,10 +20,8 @@ public sealed class MainWindow : Window
     private string _selected = "kali";
     private readonly TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
     private readonly TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
-    private readonly TextBlock _networkProgressText = Txt("Waiting to configure", 10, Muted);
     private readonly ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
     private readonly ProgressBar _targetProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
-    private readonly ProgressBar _networkProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
     private TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
 
 
@@ -54,7 +52,6 @@ public sealed class MainWindow : Window
         {
             "Attacker" => (_attackerProgress, _attackerProgressText),
             "Target" => (_targetProgress, _targetProgressText),
-            "Network" => (_networkProgress, _networkProgressText),
             _ => throw new ArgumentException("Unknown component", nameof(component))
         };
         label.Text = step;
@@ -147,8 +144,6 @@ public sealed class MainWindow : Window
         link.Children.Add(networkName);
         link.Children.Add(networkType);
         link.Children.Add(PendingInstall("Configure Network"));
-        link.Children.Add(_networkProgressText);
-        link.Children.Add(_networkProgress);
         var linkTile = new Border {
             Background = Paint("#122432"), CornerRadius = new CornerRadius(10),
             Padding = new Thickness(9, 14), VerticalAlignment = VerticalAlignment.Center,
