@@ -1309,7 +1309,7 @@ public sealed class MainWindow : Window
                 var output = await stdout;
                 var error = await stderr;
                 var match = System.Text.RegularExpressions.Regex.Match(output,
-                    @"\\binet\\s+(10\\.4\\.4\\.\\d{1,3})/24\\b");
+                    @"\binet\s+(10\.4\.4\.\d{1,3})/24\b");
                 if (match.Success && proc.ExitCode == 0)
                 {
                     _kaliDhcpAddress = match.Groups[1].Value;
