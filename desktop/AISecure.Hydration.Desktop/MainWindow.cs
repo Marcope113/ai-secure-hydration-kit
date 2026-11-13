@@ -36,6 +36,7 @@ public sealed class MainWindow : Window
     private string? _debianSha256;
     private string? _kaliSha256;
     private TextBlock? _kaliHashLabel;
+    private TextBlock? _debianHashLabel;
     private string _kaliStatus = "Waiting to download";
     private string _debianStatus = "Waiting to download";
     private DispatcherTimer? _circuitTimer;
@@ -481,10 +482,6 @@ public sealed class MainWindow : Window
         _installAttackerButton = installAttacker;
         attackerActions.Children.Add(installAttacker);
         attackerControls.Children.Add(attackerActions);
-        _kaliHashLabel = Txt(_kaliSha256 is null ? "" : "SHA-256: " + _kaliSha256[..32] + "\\n" + _kaliSha256[32..], 10, Muted);
-        _kaliHashLabel.TextWrapping = TextWrapping.Wrap;
-        if (_kaliSha256 is not null) ToolTip.SetTip(_kaliHashLabel, _kaliSha256);
-        attackerControls.Children.Add(_kaliHashLabel);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
@@ -513,7 +510,23 @@ public sealed class MainWindow : Window
         attackerCard.Children.Add(attackerLayout);
         var attackerProgressArea = Stack(2);
         attackerProgressArea.Margin = new Thickness(0);
-        attackerProgressArea.Children.Add(_attackerProgressText);
+        var attackerProgressHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        attackerProgressHeader.Children.Add(_attackerProgressText);
+        var attackerHashActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        _kaliHashLabel = Txt(_kaliSha256 is null ? "" : "SHA-256: " + _kaliSha256[..12] + "…", 10, Muted);
+        attackerHashActions.Children.Add(_kaliHashLabel);
+        var attackerCopy = Button("Copy", () => {
+            var hash = _kaliSha256;
+            if (hash is not null && Clipboard is not null) _ = Clipboard.SetTextAsync(hash);
+        });
+        attackerCopy.Padding = new Thickness(6, 1);
+        attackerCopy.FontSize = 10;
+        attackerCopy.IsEnabled = _kaliSha256 is not null;
+        attackerHashActions.Children.Add(attackerCopy);
+        Grid.SetColumn(attackerHashActions, 1);
+        attackerProgressHeader.Children.Add(attackerHashActions);
+        attackerProgressArea.Children.Add(attackerProgressHeader);
+
         attackerProgressArea.Children.Add(_attackerProgress);
         attackerCard.Children.Add(attackerProgressArea);
         var attacker = Tile(attackerCard); attacker.Padding = new Thickness(7);
@@ -571,7 +584,23 @@ public sealed class MainWindow : Window
         targetCard.Children.Add(targetLayout);
         var targetProgressArea = Stack(2);
         targetProgressArea.Margin = new Thickness(0);
-        targetProgressArea.Children.Add(_targetProgressText);
+        var targetProgressHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        targetProgressHeader.Children.Add(_targetProgressText);
+        var targetHashActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        _debianHashLabel = Txt(_debianSha256 is null ? "" : "SHA-256: " + _debianSha256[..12] + "…", 10, Muted);
+        targetHashActions.Children.Add(_debianHashLabel);
+        var targetCopy = Button("Copy", () => {
+            var hash = _debianSha256;
+            if (hash is not null && Clipboard is not null) _ = Clipboard.SetTextAsync(hash);
+        });
+        targetCopy.Padding = new Thickness(6, 1);
+        targetCopy.FontSize = 10;
+        targetCopy.IsEnabled = _debianSha256 is not null;
+        targetHashActions.Children.Add(targetCopy);
+        Grid.SetColumn(targetHashActions, 1);
+        targetProgressHeader.Children.Add(targetHashActions);
+        targetProgressArea.Children.Add(targetProgressHeader);
+
         targetProgressArea.Children.Add(_targetProgress);
         targetCard.Children.Add(targetProgressArea);
         var targetTile = Tile(targetCard); targetTile.Padding = new Thickness(7);
@@ -959,11 +988,14 @@ public sealed class MainWindow : Window
                     _kaliSha256 = actual;
                     if (_kaliHashLabel is not null)
                     {
-                        _kaliHashLabel.Text = "SHA-256 verified: " + actual[..32] + "\\n" + actual[32..];
+                        _kaliHashLabel.Text = "SHA-256: " + actual[..12] + "…";
+
                         ToolTip.SetTip(_kaliHashLabel, actual);
                     }
                 }
-                if (!kali) { _debianVerified = true; _debianSha256 = actual; }
+                if (!kali) { _debianVerified = true; _debianSha256 = actual;
+                    if (_debianHashLabel is not null) { _debianHashLabel.Text = "SHA-256: " + actual[..12] + "…"; ToolTip.SetTip(_debianHashLabel, actual); }
+                }
                 Status(kali ? "Kali image verified - ready to register VM" :
                     "Debian ISO verified - automated installation pending", 100);
                 if (actionButton is not null)
