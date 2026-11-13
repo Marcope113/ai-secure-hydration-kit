@@ -1318,6 +1318,7 @@ public sealed class MainWindow : Window
 
     private string? _kaliDhcpAddress;
     private bool _requestingKaliDhcp;
+    private bool _preparingKaliNetwork;
     private async Task RequestKaliDhcpAsync(string uuid)
     {
         if (_requestingKaliDhcp) return;
@@ -1385,6 +1386,65 @@ public sealed class MainWindow : Window
         finally { _requestingKaliDhcp = false; }
     }
 
+    // Best-effort first-boot provisioning against the official Kali VirtualBox image.
+    // This requires a functioning guestcontrol service; never report success based on a DHCP lease alone.
+    private async Task PrepareKaliNetworkAsync(string uuid)
+    {
+        if (_preparingKaliNetwork) return;
+        _preparingKaliNetwork = true;
+        try
+        {
+            var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Oracle", "VirtualBox", "VBoxManage.exe");
+            var script = "set -eu; " +
+                "dev=$(nmcli -t -f DEVICE,TYPE device status | awk -F: '$2==\"ethernet\" {print $1; exit}'); " +
+                "[ -n \"$dev\" ] || exit 42; " +
+                "con=$(nmcli -g GENERAL.CONNECTION device show \"$dev\"); " +
+                "if [ -z \"$con\" ] || [ \"$con\" = \"--\" ]; then " +
+                "con=aisecurelab-dhcp; nmcli connection show \"$con\" >/dev/null 2>&1 || " +
+                "nmcli connection add type ethernet ifname \"$dev\" con-name \"$con\"; fi; " +
+                "nmcli connection modify \"$con\" ipv4.method auto ipv4.dad-timeout 0 " +
+                "ipv4.never-default yes ipv6.method disabled connection.autoconnect yes; " +
+                "nmcli -w 25 connection up \"$con\"; ip -4 -o addr show dev \"$dev\"";
+            for (var attempt = 0; attempt < 12; attempt++)
+            {
+                var psi = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                var command = "printf '%s\\n' kali | sudo -S /bin/bash -lc " +
+                    "'" + script.Replace("'", "'\\''") + "'";
+                foreach (var arg in new[] { "guestcontrol", uuid, "run", "--username", "kali",
+                    "--password", "kali", "--wait-stdout", "--wait-stderr",
+                    "--exe", "/bin/bash", "--", "bash", "-lc", command })
+                    psi.ArgumentList.Add(arg);
+                using var process = Process.Start(psi) ?? throw new InvalidOperationException("Cannot start VirtualBox guestcontrol");
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+                using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(35));
+                try { await process.WaitForExitAsync(timeout.Token); }
+                catch (OperationCanceledException) { try { process.Kill(true); } catch {} }
+                var output = await outputTask;
+                var error = await errorTask;
+                if (process.HasExited && process.ExitCode == 0 &&
+                    System.Text.RegularExpressions.Regex.IsMatch(output, @"\binet\s+10\.4\.4\.\d{1,3}/24\b"))
+                {
+                    _attackerProgressText.Text = "Kali DHCP configured and verified inside the guest.";
+                    return;
+                }
+                if (attempt == 11)
+                    throw new InvalidOperationException("Guest provisioning unavailable. " +
+                        (error.Length > 200 ? error[..200] : error));
+                await Task.Delay(5000);
+            }
+        }
+        catch (Exception ex)
+        {
+            _attackerProgressText.Text = "Kali network setup needs attention: " + ex.Message;
+        }
+        finally { _preparingKaliNetwork = false; }
+    }
+
     private async Task OpenKaliVirtualBoxAsync()
     {
         var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -1427,7 +1487,7 @@ public sealed class MainWindow : Window
             {
                 _attackerProgressText.Text = "Kali running - checking DHCP...";
                 await ConfigureDhcpAsync();
-                if (_dhcpConfigured) _ = RequestKaliDhcpAsync(uuid);
+                if (_dhcpConfigured) { _ = PrepareKaliNetworkAsync(uuid); _ = RequestKaliDhcpAsync(uuid); }
                 return;
             }
             if (!state.Contains("VMState=\"poweroff\"", StringComparison.OrdinalIgnoreCase) &&
@@ -1451,6 +1511,7 @@ public sealed class MainWindow : Window
             }
             if (_dhcpConfigured) {
                 _attackerProgressText.Text = "Opening Kali - requesting DHCP after guest boot...";
+                _ = PrepareKaliNetworkAsync(uuid);
                 _ = RequestKaliDhcpAsync(uuid);
             }
         }
