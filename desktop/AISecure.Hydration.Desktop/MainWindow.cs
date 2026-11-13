@@ -564,7 +564,7 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB ARCHITECTURE");
         var topology = Stack(2);
         topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
-        var layers = Stack(12);
+        var layers = Stack(26);
         Control WithLayer(Control content, string layer, string description)
         {
             var frame = new Grid();
