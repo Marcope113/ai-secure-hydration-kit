@@ -11,7 +11,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$Version='0.3.3-preview'
+$Version='0.3.4-preview'
 $Root=Join-Path $env:LOCALAPPDATA 'AISecureAcademy'
 $Manifest=Join-Path $Root 'hydration-state.json'
 $VMManifest=Join-Path $Root 'hydration-v02.json'
@@ -135,8 +135,8 @@ try{
    if(-not $p.MeetsVMRequirements){Write-Warning 'VM minimum requirements not met.'}
    $vmState=Read-Json $VMManifest
    $mediaState=Read-Json $MediaManifest
-   Show-Line 'VM scaffold' $(if($vmState -and $vmState.stage -eq 'vm-scaffold-ready'){'READY'}else{'NOT READY'}) [bool]($vmState -and $vmState.stage -eq 'vm-scaffold-ready')
-   Show-Line 'Debian media' $(if($mediaState -and $mediaState.status -eq 'iso-attached-not-installed'){'ATTACHED'}else{'NOT RECORDED'}) [bool]($mediaState -and $mediaState.status -eq 'iso-attached-not-installed')
+   Show-Line 'VM scaffold' $(if($vmState -and $vmState.stage -eq 'vm-scaffold-ready'){'READY'}else{'NOT READY'}) ([bool]($vmState -and $vmState.stage -eq 'vm-scaffold-ready'))
+   Show-Line 'Debian media' $(if($mediaState -and $mediaState.status -eq 'iso-attached-not-installed'){'ATTACHED'}else{'NOT RECORDED'}) ([bool]($mediaState -and $mediaState.status -eq 'iso-attached-not-installed'))
    Show-Line 'Guest OS' 'NOT VERIFIED / INSTALL PENDING' $false
    Write-Host 'Diagnostics complete; no changes made.' -ForegroundColor Green
   }
