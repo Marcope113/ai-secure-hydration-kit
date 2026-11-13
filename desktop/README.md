@@ -5,10 +5,20 @@ An initial Avalonia UI desktop application for Windows. This is a **source-only,
 ## Prerequisites
 
 - Windows 11 x64
-- .NET 8 SDK (install separately from Microsoft if missing)
+- .NET 8 SDK (the developer bootstrap offers to install it using winget with permission)
 - Git
 
-## Run from the repository root
+## One-command developer bootstrap
+
+From the repository root, run:
+
+```powershell
+.\start-hydration.ps1
+```
+
+This detects .NET 8 SDK, requests consent to install it if absent, restores Avalonia dependencies, and launches the desktop application. It does not install VMs or guest operating systems. For read-only dependency checks, use `.\start-hydration.ps1 -CheckOnly`.
+
+## Run manually from the repository root
 
 ```powershell
 dotnet restore .\desktop\AISecure.Hydration.Desktop\AISecure.Hydration.Desktop.csproj
