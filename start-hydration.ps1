@@ -48,6 +48,7 @@ if(-not (Test-Path -LiteralPath $project)){throw "Desktop project not found: $pr
 Write-Host '[3/4] Restoring Avalonia dependencies' -ForegroundColor Cyan
 & $dotnet restore $project
 if($LASTEXITCODE -ne 0){throw 'Dependency restore failed.'}
+$env:AISECURE_KIT_ROOT=$PSScriptRoot
 Write-Host '[4/4] Starting Hydration Kit Desktop' -ForegroundColor Cyan
 & $dotnet run --no-restore --project $project
 if($LASTEXITCODE -ne 0){throw "Desktop app exited with error $LASTEXITCODE."}
