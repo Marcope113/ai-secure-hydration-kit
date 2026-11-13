@@ -21,6 +21,12 @@ public sealed class MainWindow : Window
     private string _selected = "kali";
     private bool _installingVirtualBox;
     private bool _removingVirtualBox;
+    private bool _downloadingKali;
+    private bool _downloadingDebian;
+    private double _kaliPercent;
+    private double _debianPercent;
+    private string _kaliStatus = "Waiting to download";
+    private string _debianStatus = "Waiting to download";
     private DispatcherTimer? _circuitTimer;
     private readonly List<(Border segment, bool green)> _pulseSegments = new();
     private bool _pulseBright;
@@ -387,10 +393,11 @@ public sealed class MainWindow : Window
         _pulseBright = false;
         // Progress is model state; controls belong to one page instance only.
         // Never reparent an existing TextBlock or ProgressBar during Refresh.
-        _attackerProgressText = Txt("Waiting to download", 11, Muted);
-        _targetProgressText = Txt("Waiting to download", 11, Muted);
+        _attackerProgressText = Txt(_kaliStatus, 11, Muted);
+        _targetProgressText = Txt(_debianStatus, 11, Muted);
         _attackerProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
-        _targetProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
+        _targetProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = _debianPercent, Height = 7 };
+        _attackerProgress.Value = _kaliPercent;
         // Create fresh controls for each page build. Avalonia controls cannot
         // be attached to multiple logical parents after a rebuild.
         _distro = new ComboBox { ItemsSource = new[] { "Kali Linux" }, SelectedIndex = 0, MinWidth = 210 };
@@ -451,8 +458,8 @@ public sealed class MainWindow : Window
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
         var attackerControls = Stack(2);
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        var getKali = Button("Get Kali Image", OpenAttackerIsoPage);
-        getKali.IsEnabled = hypervisorReady;
+        var getKali = Button("Get Kali Image", () => _ = DownloadLabImageAsync("kali"));
+        getKali.IsEnabled = hypervisorReady && !_downloadingKali;
         attackerActions.Children.Add(getKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         attackerActions.Children.Add(PendingInstall("Install Attacker"));
@@ -574,7 +581,7 @@ public sealed class MainWindow : Window
         if (hypervisorReady)
         {
             var uninstallHypervisor = Button("Uninstall VirtualBox", () => _ = UninstallVirtualBoxAsync());
-            uninstallHypervisor.BorderBrush = Paint(Green);
+            uninstallHypervisor.BorderBrush = Paint(Red);
             uninstallHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(uninstallHypervisor);
         }
@@ -781,8 +788,8 @@ public sealed class MainWindow : Window
     {
         var stack = Stack(3);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        var getDebian = Button("Get Debian VM", OpenAcademyDebianReleases);
-        getDebian.IsEnabled = hypervisorReady;
+        var getDebian = Button("Get Debian VM", () => _ = DownloadLabImageAsync("debian"));
+        getDebian.IsEnabled = hypervisorReady && !_downloadingDebian;
         actions.Children.Add(getDebian);
         actions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         actions.Children.Add(PendingInstall("Install Target"));
