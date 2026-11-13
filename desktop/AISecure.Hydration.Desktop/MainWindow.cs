@@ -1362,7 +1362,7 @@ public sealed class MainWindow : Window
                                 _networkStatusLabel.Text = "● DHCP LEASE VERIFIED";
                                 _networkStatusLabel.Foreground = Paint(Green);
                             }
-                            _attackerProgressText = "VirtualBox DHCP lease: " + ip;
+                            _attackerProgressText.Text = "VirtualBox DHCP lease: " + ip;
                             ShowSetup();
                         }
                         return;
