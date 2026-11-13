@@ -501,11 +501,24 @@ public sealed class MainWindow : Window
         Section("ACTIVITY");
         _page.Children.Add(_activity);
 
-        var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 20, 0, 12) };
+        var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*"), Margin = new Thickness(0, 20, 0, 12) };
         var nextInfo = Txt("STEP 2 OF 2  /  LEARNING PATH  -  Available after lab validation", 12, Muted);
         nextInfo.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(nextInfo, 0);
         footer.Children.Add(nextInfo);
+
+        var exitButton = Button("Exit", Close);
+        exitButton.MinWidth = 220;
+        exitButton.Padding = new Thickness(28, 13);
+        exitButton.Background = Paint("#E58A35");
+        exitButton.Foreground = Paint("#101820");
+        exitButton.CornerRadius = new CornerRadius(9);
+        exitButton.FontWeight = FontWeight.Bold;
+        exitButton.HorizontalAlignment = HorizontalAlignment.Center;
+        exitButton.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(exitButton, 1);
+        footer.Children.Add(exitButton);
+
         _next.Content = "Next  >";
         _next.IsEnabled = false;
         _next.MinWidth = 155;
@@ -514,24 +527,8 @@ public sealed class MainWindow : Window
         _next.Foreground = Paint("#F0F5FA");
         _next.CornerRadius = new CornerRadius(9);
         _next.FontWeight = FontWeight.SemiBold;
-        Grid.SetColumn(_next, 1);
+        Grid.SetColumn(_next, 2);
         footer.Children.Add(_next);
-        var exitButton = Button("Exit", Close);
-        exitButton.HorizontalAlignment = HorizontalAlignment.Right;
-        exitButton.VerticalAlignment = VerticalAlignment.Center;
-        exitButton.Margin = new Thickness(0, 0, 12, 0);
-        Grid.SetColumn(exitButton, 1);
-        // Put Exit before Next in a right-aligned horizontal action group.
-        var footerActions = new StackPanel {
-            Orientation = Orientation.Horizontal,
-            Spacing = 10,
-            HorizontalAlignment = HorizontalAlignment.Right
-        };
-        footer.Children.Remove(_next);
-        footerActions.Children.Add(exitButton);
-        footerActions.Children.Add(_next);
-        Grid.SetColumn(footerActions, 1);
-        footer.Children.Add(footerActions);
         _page.Children.Add(footer);
     }
 
