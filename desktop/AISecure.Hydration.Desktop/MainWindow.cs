@@ -26,7 +26,7 @@ public sealed class MainWindow : Window
     private bool _pulseBright;
     private readonly string _isoRoot = ResolveIsoDirectory();
     private TextBlock _attackerProgressText = Txt("Waiting to download", 11, Muted);
-    private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
+    private TextBlock _targetProgressText = Txt("Waiting to download", 11, Muted);
     private ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
     private ProgressBar _targetProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
     private TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
@@ -371,8 +371,8 @@ public sealed class MainWindow : Window
         _pulseBright = false;
         // Progress is model state; controls belong to one page instance only.
         // Never reparent an existing TextBlock or ProgressBar during Refresh.
-        _attackerProgressText = Txt("Waiting to install", 11, Muted);
-        _targetProgressText = Txt("Waiting to install", 11, Muted);
+        _attackerProgressText = Txt("Waiting to download", 11, Muted);
+        _targetProgressText = Txt("Waiting to download", 11, Muted);
         _attackerProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
         _targetProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
         // Create fresh controls for each page build. Avalonia controls cannot
