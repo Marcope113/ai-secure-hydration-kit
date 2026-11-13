@@ -107,9 +107,9 @@ public sealed class MainWindow : Window
         new() { Text = value, FontSize = size, Foreground = Paint(color), FontWeight = weight, TextWrapping = TextWrapping.Wrap };
     private static Border Tile(Control child, string background = "#24394D") =>
         new() {
-            Background = Paint(background), CornerRadius = new CornerRadius(12),
+            Background = Paint(background), CornerRadius = new CornerRadius(14),
             Padding = new Thickness(19), Child = child,
-            BorderBrush = Paint("#355368"), BorderThickness = new Thickness(1)
+            BorderBrush = Paint("#38576D"), BorderThickness = new Thickness(1)
         };
 
     private static void SetReadyOutline(Border tile, bool ready)
@@ -121,16 +121,21 @@ public sealed class MainWindow : Window
     private static Button Button(string title, Action click)
     {
         var b = new Button {
-            Content = title, Padding = new Thickness(14, 8),
+            Content = title, Padding = new Thickness(16, 9),
             HorizontalAlignment = HorizontalAlignment.Left,
             HorizontalContentAlignment = HorizontalAlignment.Center,
-            CornerRadius = new CornerRadius(9),
+            CornerRadius = new CornerRadius(11),
             Background = Paint("#142B42"),
             Foreground = Paint(Text),
             BorderBrush = Paint(Accent),
             BorderThickness = new Thickness(1.5),
             FontWeight = FontWeight.SemiBold
         };
+        b.PointerEntered += (_, _) => {
+            if (!b.IsEnabled) return;
+            b.Background = Paint("#21465E");
+        };
+        b.PointerExited += (_, _) => b.Background = Paint("#142B42");
         b.Click += (_, _) => click();
         return b;
     }
@@ -478,7 +483,7 @@ public sealed class MainWindow : Window
         _next.Click += (_, _) => ShowLessons();
 
         Header("LAB SETUP  /  STEP 1 OF 2");
-        var overview = Stack(2);
+        var overview = Stack(7);
         var overviewHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
         var tux = new IsometricLabIcon { Kind = "tux", Width = 43, Height = 40 };
         tux.VerticalAlignment = VerticalAlignment.Center;
@@ -517,7 +522,8 @@ public sealed class MainWindow : Window
             techniqueDescription.HorizontalAlignment = HorizontalAlignment.Stretch;
             body.Children.Add(techniqueDescription);
             var tile = Tile(body);
-            tile.Padding = new Thickness(9, 13);
+            tile.Padding = new Thickness(10, 15);
+            tile.CornerRadius = new CornerRadius(11);
             Grid.SetColumn(tile, i); techniques.Children.Add(tile);
         }
         overview.Children.Add(techniques);
@@ -525,7 +531,7 @@ public sealed class MainWindow : Window
 
 
         var overviewTile = Tile(overview);
-        overviewTile.Padding = new Thickness(12);
+        overviewTile.Padding = new Thickness(16, 15);
         _page.Children.Add(overviewTile);
 
         Section("VIRTUAL LAB ARCHITECTURE");
@@ -855,13 +861,13 @@ public sealed class MainWindow : Window
         circuitTimer.Start();
         topology.Children.Add(circuitLayout);
         var architecturePanel = new Border {
-            Background = Paint("#0F2030"), CornerRadius = new CornerRadius(16),
-            BorderBrush = Paint("#294153"), BorderThickness = new Thickness(1),
-            Padding = new Thickness(11), Child = topology
+            Background = Paint("#0D1E2D"), CornerRadius = new CornerRadius(18),
+            BorderBrush = Paint("#35566B"), BorderThickness = new Thickness(1),
+            Padding = new Thickness(12), Child = topology
         };
         _page.Children.Add(architecturePanel);
 
-        var isoLocation = Stack(7);
+        var isoLocation = Stack(10);
         var isoHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         isoHeader.Children.Add(new IsometricLabIcon { Kind = "folder" });
         var isoLabel = Txt("ISO STORAGE  /  HYDRATION KIT", 13, Accent, FontWeight.Bold);
@@ -870,7 +876,7 @@ public sealed class MainWindow : Window
         isoLocation.Children.Add(isoHeader);
         var storageRoot = Path.GetDirectoryName(Path.GetDirectoryName(_isoRoot)!)!;
         var extractionRoot = Path.Combine(_root, "virtual-machines", "kali");
-        var storageTree = Stack(8);
+        var storageTree = Stack(10);
         storageTree.Children.Add(Txt("STORAGE LOCATIONS", 11, Accent, FontWeight.Bold));
         void AddStoragePath(StackPanel parent, string label, string path, string description)
         {
