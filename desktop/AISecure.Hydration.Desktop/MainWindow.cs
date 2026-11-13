@@ -72,7 +72,17 @@ public sealed class MainWindow : Window
     private static StackPanel Stack(int gap = 9) => new() { Spacing = gap };
     private static Button Button(string title, Action click)
     {
-        var b = new Button { Content = title, Padding = new Thickness(14, 9), HorizontalAlignment = HorizontalAlignment.Left };
+        var b = new Button {
+            Content = title, Padding = new Thickness(14, 8),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            CornerRadius = new CornerRadius(9),
+            Background = Paint("#142B42"),
+            Foreground = Paint(Text),
+            BorderBrush = Paint(Accent),
+            BorderThickness = new Thickness(1.5),
+            FontWeight = FontWeight.SemiBold
+        };
         b.Click += (_, _) => click();
         return b;
     }
@@ -283,9 +293,9 @@ public sealed class MainWindow : Window
             if (width <= 0) return;
             // Column centers for 35% / 30% / 35%, accounting for 8px gaps.
             var usable = width - 16;
-            var x1 = usable * .175;
+            var x1 = usable * .18;
             var x2 = 8 + usable * .50;
-            var x3 = 16 + usable * .825;
+            var x3 = 16 + usable * .82;
             Canvas.SetLeft(left, x1 - 2); Canvas.SetTop(left, 0);
             Canvas.SetLeft(center, x2 - 2); Canvas.SetTop(center, 0);
             Canvas.SetLeft(right, x3 - 2); Canvas.SetTop(right, 0);
@@ -392,7 +402,7 @@ public sealed class MainWindow : Window
             frame.Children.Add(labels);
             return frame;
         }
-        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("38*,24*,38*"), ColumnSpacing = 6 };
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
         var attackerControls = Stack(2);
         attackerControls.Children.Add(Button("Get Kali VirtualBox Image", OpenAttackerIsoPage));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
@@ -450,7 +460,19 @@ public sealed class MainWindow : Window
             Padding = new Thickness(9, 9), VerticalAlignment = VerticalAlignment.Center,
             Child = link
         };
-        Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
+        // Extend the center branch from the network tile to the bottom of the VM row.
+        var networkColumn = new Grid { RowDefinitions = new RowDefinitions("*,Auto,*") };
+        Grid.SetRow(linkTile, 1);
+        networkColumn.Children.Add(linkTile);
+        var networkStem = new Border {
+            Width = 4, Background = Paint("#59788C"),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        Grid.SetRow(networkStem, 2);
+        networkColumn.Children.Add(networkStem);
+        Grid.SetColumn(networkColumn, 1);
+        network.Children.Add(networkColumn);
         var targetActions = Stack(2);
         targetActions.Children.Add(TargetControls());
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
@@ -552,9 +574,6 @@ public sealed class MainWindow : Window
         layers.Children.Add(CircuitConnector(hypervisorReady && archOk && diskOk && ramOk && logicalProcessors >= 4));
         layers.Children.Add(WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system"));
         topology.Children.Add(layers);
-        var flowNote = Txt("SETUP FLOW   Host  →  Hypervisor  →  Virtual Machines  →  Network validation", 12, Accent);
-        flowNote.TextAlignment = TextAlignment.Center;
-        topology.Children.Add(flowNote);
         _page.Children.Add(new Border {
             Background = Paint("#0F2030"), CornerRadius = new CornerRadius(16),
             BorderBrush = Paint("#294153"), BorderThickness = new Thickness(1),
