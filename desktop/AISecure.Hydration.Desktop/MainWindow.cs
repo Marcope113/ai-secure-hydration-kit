@@ -1128,7 +1128,7 @@ public sealed class MainWindow : Window
             _attackerProgress.Value = 100;
             if (_installAttackerButton is not null)
             {
-                _installAttackerButton.Content = "● 3 Open Kali";
+                _installAttackerButton.Content = "●";
                 _installAttackerButton.BorderBrush = Paint(Green);
                 _installAttackerButton.IsEnabled = true;
             }
@@ -1694,7 +1694,7 @@ public sealed class MainWindow : Window
             _installingAttacker = false;
             if (_installAttackerButton is not null) {
                 _installAttackerButton.IsEnabled = true;
-                _installAttackerButton.Content = _kaliConfigured ? "● 3 Open Kali" : "● 3 Install";
+                _installAttackerButton.Content = "●";
                 if (_kaliConfigured) _installAttackerButton.BorderBrush = Paint(Green);
             }
         }
@@ -1779,7 +1779,7 @@ public sealed class MainWindow : Window
                     "Debian ISO verified - automated installation pending", 100);
                 if (actionButton is not null)
                 {
-                    actionButton.Content = kali ? "Kali downloaded" : "Debian downloaded";
+                    if (!kali) actionButton.Content = "Debian downloaded";
                     actionButton.IsEnabled = true;
                     actionButton.BorderBrush = Paint(Green);
                 }
@@ -1837,7 +1837,7 @@ public sealed class MainWindow : Window
                     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                     "Oracle", "VirtualBox", "VBoxManage.exe"));
             if (kali && _installAttackerButton is not null)
-                _installAttackerButton.IsEnabled = _kaliVerified && !_installingAttacker;
+                _installAttackerButton.IsEnabled = _kaliConfigured;
         }
     }
 
