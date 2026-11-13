@@ -870,35 +870,54 @@ public sealed class MainWindow : Window
         isoLocation.Children.Add(isoHeader);
         var storageRoot = Path.GetDirectoryName(Path.GetDirectoryName(_isoRoot)!)!;
         var extractionRoot = Path.Combine(_root, "virtual-machines", "kali");
-        var storageTree = Stack(3);
+        var storageTree = Stack(8);
         storageTree.Children.Add(Txt("STORAGE LOCATIONS", 11, Accent, FontWeight.Bold));
-        void AddStoragePath(string prefix, string label, string path)
+        void AddStoragePath(StackPanel parent, string label, string path, string description)
         {
-            var entry = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            var name = Txt(prefix + " " + label, 12, Muted);
+            var entry = new Grid { ColumnDefinitions = new ColumnDefinitions("220,*"), ColumnSpacing = 14 };
+            var name = Txt(label, 12, Text, FontWeight.SemiBold);
             name.VerticalAlignment = VerticalAlignment.Center;
             entry.Children.Add(name);
-            var link = Txt(path, 12, Accent);
+            var link = Txt(description, 12, Accent);
             link.VerticalAlignment = VerticalAlignment.Center;
             link.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
             link.TextDecorations = TextDecorations.Underline;
-            ToolTip.SetTip(link, "Open folder: " + path);
+            ToolTip.SetTip(link, "Open: " + path);
             link.PointerEntered += (_, _) => link.Foreground = Paint("#B3F6FF");
             link.PointerExited += (_, _) => link.Foreground = Paint(Accent);
             link.PointerPressed += (_, _) => OpenStoragePath(path);
+            Grid.SetColumn(link, 1);
             entry.Children.Add(link);
-            storageTree.Children.Add(entry);
+            parent.Children.Add(entry);
         }
-        AddStoragePath("▣", "HYDRATION KIT ROOT", storageRoot);
-        AddStoragePath("├─", "DOWNLOADS / ISOS", _isoRoot);
-        AddStoragePath("├─", "EXTRACTED VMS", extractionRoot);
+        AddStoragePath(storageTree, "PROJECT ROOT", storageRoot, storageRoot);
+        AddStoragePath(storageTree, "DOWNLOADED IMAGES", _isoRoot, "downloads / isos");
+        AddStoragePath(storageTree, "KALI VM FILES", extractionRoot, "virtual-machines / kali");
         var temporaryRoot = Path.Combine(_root, "virtual-machines");
-        AddStoragePath("└─", "VM WORKSPACE / TEMPORARY", temporaryRoot);
+        AddStoragePath(storageTree, "VM WORKSPACE", temporaryRoot, "virtual-machines");
         var extractedSessions = Directory.Exists(extractionRoot)
-            ? Directory.GetDirectories(extractionRoot).OrderByDescending(p => p).Take(5).ToArray()
+            ? Directory.GetDirectories(extractionRoot).OrderByDescending(p => p).ToArray()
             : Array.Empty<string>();
-        foreach (var session in extractedSessions)
-            AddStoragePath("   └─", Path.GetFileName(session), session);
+        if (extractedSessions.Length > 0)
+        {
+            var history = Stack(5);
+            history.IsVisible = false;
+            foreach (var session in extractedSessions)
+            {
+                var configCount = Directory.GetFiles(session, "*.vbox", SearchOption.AllDirectories).Length;
+                var diskCount = Directory.GetFiles(session, "*.vdi", SearchOption.AllDirectories).Length;
+                var marker = File.Exists(Path.Combine(session, ".aisecure-extraction-incomplete"));
+                var label = marker ? "INCOMPLETE ATTEMPT" :
+                    configCount > 0 && diskCount > 0 ? "EXTRACTED VM FILES" : "EXTRACTION FOLDER";
+                AddStoragePath(history, label, session, Path.GetFileName(session));
+            }
+            var toggle = Button("Show extraction history (" + extractedSessions.Length + ")", () => {
+                history.IsVisible = !history.IsVisible;
+            });
+            toggle.HorizontalAlignment = HorizontalAlignment.Left;
+            storageTree.Children.Add(toggle);
+            storageTree.Children.Add(history);
+        }
         isoLocation.Children.Add(storageTree);
         var openStorageRoot = Button("Open Hydration Kit Root", () => OpenStoragePath(storageRoot));
         isoLocation.Children.Add(openStorageRoot);
