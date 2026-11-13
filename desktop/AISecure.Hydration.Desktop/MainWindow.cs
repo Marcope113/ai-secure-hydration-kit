@@ -138,7 +138,28 @@ public sealed class MainWindow : Window
         overview.Children.Add(Txt("One target Debian VM + your choice of Kali Linux or Parrot Security OS.", 13, Accent));
         _page.Children.Add(Tile(overview));
 
-        Section("VIRTUAL LAB TOPOLOGY");
+        Section("VIRTUAL LAB ARCHITECTURE");
+        var topology = Stack(12);
+        topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
+        var layers = new Grid {
+            ColumnDefinitions = new ColumnDefinitions("170,*"),
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto"),
+            ColumnSpacing = 16, RowSpacing = 12
+        };
+        Control LayerLabel(string number, string title, string description, string color)
+        {
+            var label = Stack(5);
+            label.VerticalAlignment = VerticalAlignment.Center;
+            label.Children.Add(Txt(number, 12, color, FontWeight.Bold));
+            label.Children.Add(Txt(title, 16, Text, FontWeight.SemiBold));
+            label.Children.Add(Txt(description, 12, Muted));
+            return label;
+        }
+        void AddLayer(Control label, Control content, int row)
+        {
+            Grid.SetRow(label, row); Grid.SetColumn(label, 0); layers.Children.Add(label);
+            Grid.SetRow(content, row); Grid.SetColumn(content, 1); layers.Children.Add(content);
+        }
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
         attackerControls.Children.Add(Button("Download " + (_selected == "parrot" ? "Parrot" : "Kali") + " ISO", OpenAttackerIsoPage));
@@ -189,15 +210,7 @@ public sealed class MainWindow : Window
             "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
             TargetControls());
         Grid.SetColumn(target, 2); network.Children.Add(target);
-        _page.Children.Add(network);
-        var topologyFlow = Txt("GUEST LAYER   Attacker  ⇄  aisecurelab  ⇄  Victim", 12, Accent, FontWeight.SemiBold);
-        topologyFlow.TextAlignment = TextAlignment.Center;
-        topologyFlow.HorizontalAlignment = HorizontalAlignment.Stretch;
-        _page.Children.Add(topologyFlow);
-        var layerArrow = Txt("↓  hosted by  ↓", 12, Muted, FontWeight.SemiBold);
-        layerArrow.TextAlignment = TextAlignment.Center;
-        layerArrow.HorizontalAlignment = HorizontalAlignment.Stretch;
-        _page.Children.Add(layerArrow);
+        AddLayer(LayerLabel("LAYER 03", "Virtual Machines", "Guests and isolated network", Yellow), network, 0);
 
         // The hypervisor is the foundation beneath both guest machines.
         var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -228,11 +241,7 @@ public sealed class MainWindow : Window
             installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(installHypervisor);
         }
-        _page.Children.Add(Tile(foundationInfo, "#122432"));
-        var hostArrow = Txt("↓  runs on  ↓", 12, Muted, FontWeight.SemiBold);
-        hostArrow.TextAlignment = TextAlignment.Center;
-        hostArrow.HorizontalAlignment = HorizontalAlignment.Stretch;
-        _page.Children.Add(hostArrow);
+        AddLayer(LayerLabel("LAYER 02", "Hypervisor", "Virtualization platform", Accent), Tile(foundationInfo, "#122432"), 1);
         // Physical host is the bottom layer of the topology, beneath VirtualBox.
         // Host hardware and OS are the physical foundation of the VM stack.
         var build = Environment.OSVersion.Version.Build;
@@ -260,7 +269,17 @@ public sealed class MainWindow : Window
         pendingHostChecks.TextAlignment = TextAlignment.Center;
         pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(pendingHostChecks);
-        _page.Children.Add(Tile(physicalHost, "#101E2C"));
+        AddLayer(LayerLabel("LAYER 01", "Physical Host", "Hardware and operating system", Muted),
+            Tile(physicalHost, "#101E2C"), 2);
+        topology.Children.Add(layers);
+        var flowNote = Txt("SETUP FLOW   Host  →  Hypervisor  →  Virtual Machines  →  Network validation", 12, Accent);
+        flowNote.TextAlignment = TextAlignment.Center;
+        topology.Children.Add(flowNote);
+        _page.Children.Add(new Border {
+            Background = Paint("#0F2030"), CornerRadius = new CornerRadius(16),
+            BorderBrush = Paint("#294153"), BorderThickness = new Thickness(1),
+            Padding = new Thickness(18), Child = topology
+        });
 
         var isoLocation = Stack(7);
         isoLocation.Children.Add(Txt("ISO STORAGE  /  HYDRATION KIT", 13, Accent, FontWeight.Bold));
@@ -268,8 +287,6 @@ public sealed class MainWindow : Window
         isoLocation.Children.Add(Button("Open ISO Folder", OpenIsoFolder));
         _page.Children.Add(Tile(isoLocation, "#122432"));
 
-        _page.Children.Add(Txt("SETUP ORDER   1. VirtualBox  >  2. Attacker / Target VMs  >  3. Isolated network validation",
-            12, Accent));
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
         Section("TECHNIQUES COVERED");
