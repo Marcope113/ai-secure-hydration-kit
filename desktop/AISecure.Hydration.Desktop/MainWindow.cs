@@ -30,6 +30,7 @@ public sealed class MainWindow : Window
     private Button? _debianDownloadButton;
     private bool _installingAttacker;
     private bool _kaliConfigured;
+    private bool _kaliDeployExpanded;
     private bool _kaliRunning;
     private bool _checkingKaliRuntime;
     private TextBlock? _kaliRuntimeLabel;
@@ -599,7 +600,7 @@ public sealed class MainWindow : Window
             if (_kaliVerified || localKaliArchiveExists) OpenIsoFolder();
             else _ = DownloadLabImageAsync("kali");
         }, "Download the official Kali image, or open downloads / isos", hypervisorReady);
-        var getKali = stages.Children.OfType<Button>().Last();
+        var getKali = (Button)stages.Children[0];
         _kaliDownloadButton = getKali;
         stages.Children.Add(Txt("─", 12, Accent));
         var extractedKali = Button("● 2 Extracted", () => {
@@ -1123,7 +1124,7 @@ public sealed class MainWindow : Window
             _attackerProgress.Value = 100;
             if (_installAttackerButton is not null)
             {
-                _installAttackerButton.Content = "Open Kali";
+                _installAttackerButton.Content = "● 3 Open Kali";
                 _installAttackerButton.BorderBrush = Paint(Green);
                 _installAttackerButton.IsEnabled = true;
             }
@@ -1587,7 +1588,7 @@ public sealed class MainWindow : Window
             _installingAttacker = false;
             if (_installAttackerButton is not null) {
                 _installAttackerButton.IsEnabled = true;
-                _installAttackerButton.Content = _kaliConfigured ? "Open Kali" : "Install Attacker";
+                _installAttackerButton.Content = _kaliConfigured ? "● 3 Open Kali" : "● 3 Install";
                 if (_kaliConfigured) _installAttackerButton.BorderBrush = Paint(Green);
             }
         }
