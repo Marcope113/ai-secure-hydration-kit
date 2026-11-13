@@ -59,7 +59,7 @@ public sealed class MainWindow : Window
         Refresh();
     }
 
-    private static TextBlock Label(string value, double size, string color, FontWeight weight = default) =>
+    private static TextBlock Label(string value, double size, string color, FontWeight weight = FontWeight.Normal) =>
         new() { Text = value, FontSize = size, Foreground = new SolidColorBrush(Color.Parse(color)), FontWeight = weight, TextWrapping = TextWrapping.Wrap };
 
     private void Refresh()
