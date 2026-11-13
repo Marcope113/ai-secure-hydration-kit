@@ -33,6 +33,48 @@ public sealed class IsometricLabIcon : Control
             context.DrawEllipse(Brush("#8AF0B5"), null, new Point(27,21), 1.4, 1.4);
             context.DrawEllipse(Brush("#8AF0B5"), null, new Point(32,19), 1.4, 1.4);
         }
+        else if (Kind == "hypervisor")
+        {
+            Shape("M 4,11 L 19,3 L 35,11 L 20,19 Z", "#63B8D5");
+            Shape("M 4,11 L 20,19 L 20,32 L 4,24 Z", "#326A9C");
+            Shape("M 20,19 L 35,11 L 35,24 L 20,32 Z", "#153957");
+            Shape("M 9,13 L 19,18 L 19,26 L 9,21 Z", "#102A42");
+            context.DrawLine(new Pen(Brush("#A4F4FF"), 1.6), new Point(10,17), new Point(17,20));
+        }
+        else if (Kind == "windows")
+        {
+            Shape("M 5,8 L 18,5 L 18,17 L 5,18 Z", "#39B9EC");
+            Shape("M 20,5 L 34,2 L 34,16 L 20,17 Z", "#1585CB");
+            Shape("M 5,20 L 18,19 L 18,31 L 5,28 Z", "#168DD3");
+            Shape("M 20,19 L 34,18 L 34,33 L 20,31 Z", "#1B69AA");
+        }
+        else if (Kind == "cpu")
+        {
+            Shape("M 6,10 L 24,5 L 34,13 L 16,19 Z", "#4CB3D4");
+            Shape("M 6,10 L 16,19 L 16,29 L 6,20 Z", "#255C8E");
+            Shape("M 16,19 L 34,13 L 34,23 L 16,29 Z", "#143958");
+            Shape("M 13,11 L 23,8 L 29,13 L 19,16 Z", "#A5E8F4");
+        }
+        else if (Kind == "disk")
+        {
+            Shape("M 4,13 L 25,6 L 36,14 L 15,22 Z", "#6AA6C3");
+            Shape("M 4,13 L 15,22 L 15,29 L 4,20 Z", "#315E82");
+            Shape("M 15,22 L 36,14 L 36,21 L 15,29 Z", "#173E59");
+            context.DrawEllipse(Brush("#9DEAF1"), null, new Point(21,14), 4, 3);
+        }
+        else if (Kind == "ram")
+        {
+            Shape("M 4,13 L 29,6 L 36,13 L 11,21 Z", "#64CEAE");
+            Shape("M 4,13 L 11,21 L 11,28 L 4,20 Z", "#257E76");
+            Shape("M 11,21 L 36,13 L 36,20 L 11,28 Z", "#13545D");
+            for (var i = 0; i < 4; i++)
+                context.DrawEllipse(Brush("#D2F7D8"), null, new Point(15 + i * 5, 17 - i), 1.5, 1.5);
+        }
+        else if (Kind == "folder")
+        {
+            Shape("M 3,12 L 16,8 L 21,12 L 35,8 L 35,26 L 3,30 Z", "#2D94B2");
+            Shape("M 3,16 L 35,12 L 35,28 L 3,32 Z", "#155171");
+        }
         else if (Kind == "server")
         {
             // A compact isometric server cabinet.
