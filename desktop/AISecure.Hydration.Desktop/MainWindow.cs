@@ -574,41 +574,60 @@ public sealed class MainWindow : Window
                 .OrderByDescending(folder => folder, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault()
             : null;
-        var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         var localKaliArchiveExists = Directory.Exists(_isoRoot) &&
             Directory.GetFiles(_isoRoot, "kali-linux-*-virtualbox-amd64.7z").Length > 0;
-        var getKali = Button("Get Kali Image", () => {
+        var deployArea = Stack(6);
+        var stages = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
+        stages.IsVisible = _kaliDeployExpanded;
+        var deployButton = Button("Deploy Kali Linux", () => {
+            _kaliDeployExpanded = !_kaliDeployExpanded;
+            stages.IsVisible = _kaliDeployExpanded;
+        });
+        deployButton.IsEnabled = hypervisorReady;
+        deployArea.Children.Add(deployButton);
+        void AddStage(string number, string label, bool completed, Action action, string hint, bool enabled)
+        {
+            var stage = Button("● " + number + " " + label, action);
+            stage.FontSize = 10;
+            stage.Padding = new Thickness(7, 7);
+            stage.BorderBrush = Paint(completed ? Green : Yellow);
+            stage.IsEnabled = enabled;
+            ToolTip.SetTip(stage, hint);
+            stages.Children.Add(stage);
+        }
+        AddStage("1", "Download", _kaliVerified, () => {
             if (_kaliVerified || localKaliArchiveExists) OpenIsoFolder();
             else _ = DownloadLabImageAsync("kali");
-        });
-        getKali.IsEnabled = hypervisorReady && (!_downloadingKali || localKaliArchiveExists);
-        if (_kaliVerified) { getKali.Content = "Kali downloaded"; getKali.BorderBrush = Paint(Green); }
-        else if (localKaliArchiveExists) {
-            getKali.Content = "Kali image found";
-            ToolTip.SetTip(getKali, "Open ISO folder. SHA-256 verification may still be running.");
-        }
+        }, "Download the official Kali image, or open downloads / isos", hypervisorReady);
+        var getKali = stages.Children.OfType<Button>().Last();
         _kaliDownloadButton = getKali;
-        attackerActions.Children.Add(getKali);
-        attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
-        var extractedKali = Button("Extracted", () => {
+        stages.Children.Add(Txt("─", 12, Accent));
+        var extractedKali = Button("● 2 Extracted", () => {
             if (_installedKaliFolder is not null && Directory.Exists(_installedKaliFolder))
-                Process.Start(new ProcessStartInfo(_installedKaliFolder) { UseShellExecute = true });
+                OpenStoragePath(_installedKaliFolder);
         });
+        extractedKali.FontSize = 10;
+        extractedKali.Padding = new Thickness(7, 7);
         extractedKali.IsEnabled = _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder);
-        extractedKali.BorderBrush = Paint(extractedKali.IsEnabled ? Green : "#355368");
+        extractedKali.BorderBrush = Paint(extractedKali.IsEnabled ? Green : Yellow);
+        ToolTip.SetTip(extractedKali, _installedKaliFolder ?? "Extraction pending");
         _extractedKaliButton = extractedKali;
-        attackerActions.Children.Add(extractedKali);
-        attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
-        var installAttacker = Button(_installingAttacker ? "Installing..." : "Install Attacker",
+        stages.Children.Add(extractedKali);
+        stages.Children.Add(Txt("─", 12, Accent));
+        var installAttacker = Button(_kaliConfigured ? "● 3 Open Kali" : "● 3 Install",
             () => { if (_kaliConfigured) _ = OpenKaliVirtualBoxAsync(); else _ = InstallAttackerAsync(); });
+        installAttacker.FontSize = 10;
+        installAttacker.Padding = new Thickness(7, 7);
         installAttacker.IsEnabled = hypervisorReady && _kaliVerified && !_installingAttacker;
-        if (_kaliConfigured) {
-            installAttacker.Content = "Open Kali";
-            installAttacker.BorderBrush = Paint(Green);
-        }
+        installAttacker.BorderBrush = Paint(_kaliConfigured ? Green : Yellow);
+        ToolTip.SetTip(installAttacker, _kaliConfigured ? "Start the registered Kali VM in VirtualBox" : "Register and configure Kali in VirtualBox");
         _installAttackerButton = installAttacker;
-        attackerActions.Children.Add(installAttacker);
-        attackerControls.Children.Add(attackerActions);
+        stages.Children.Add(installAttacker);
+        stages.Children.Add(Txt("─", 12, Accent));
+        AddStage("4", "Online", _kaliRunning, () => _ = RefreshKaliRuntimeAsync(),
+            "Check whether Kali is running in VirtualBox", true);
+        deployArea.Children.Add(stages);
+        attackerControls.Children.Add(deployArea);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
