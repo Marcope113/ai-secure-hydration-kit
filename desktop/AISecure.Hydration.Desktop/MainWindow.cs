@@ -263,7 +263,23 @@ public sealed class MainWindow : Window
             panel.Children.Add(slider);
         }
 
-        AddResource("DISK", "disk", 20, diskMax, 20, "GB");
+        if (role == "attacker")
+        {
+            var diskHeading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+            diskHeading.Children.Add(Txt("DISK", 11, Muted, FontWeight.SemiBold));
+            var diskValue = Txt("80 GB", 11, Accent, FontWeight.Bold);
+            Grid.SetColumn(diskValue, 1);
+            diskHeading.Children.Add(diskValue);
+            panel.Children.Add(diskHeading);
+            panel.Children.Add(new Slider {
+                Minimum = 0, Maximum = 80, Value = 80,
+                IsEnabled = false,
+                Foreground = Paint(Accent), Background = Paint("#294153"),
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            });
+            panel.Children.Add(Txt("Default Kali image", 10, Muted));
+        }
+        else AddResource("DISK", "disk", 20, diskMax, 20, "GB");
         AddResource("MEMORY", "memory", 1, maxRam, 2, "GB");
         AddResource("PROCESSORS", "processors", 1, cpuMax, 2, "");
         return panel;
