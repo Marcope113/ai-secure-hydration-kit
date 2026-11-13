@@ -459,7 +459,7 @@ public sealed class MainWindow : Window
         overview.Children.Add(Txt("Explore how Linux privilege boundaries fail. Enumerate misconfigurations, gain elevated access in an isolated environment, then investigate detection and remediation.", 14, Muted));
         overview.Children.Add(Txt("Kali Linux attacker + Academy Debian vulnerable target, both on VirtualBox.", 13, Accent));
         overview.Children.Add(Txt("TECHNIQUES COVERED", 13, Accent, FontWeight.Bold));
-        var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
+        var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*"), ColumnSpacing = 7, RowDefinitions = new RowDefinitions("Auto") };
         var items = new (string,string)[] {
             ("01  Linux Enumeration", "Users, processes and permissions"),
             ("02  Sudo Misconfigurations", "Unsafe delegated privileges"),
@@ -470,11 +470,12 @@ public sealed class MainWindow : Window
         };
         for (var i = 0; i < items.Length; i++)
         {
-            var body = Stack(6);
-            body.Children.Add(Txt(items[i].Item1, 14, Text, FontWeight.SemiBold));
-            body.Children.Add(Txt(items[i].Item2, 12, Muted));
+            var body = Stack(4);
+            body.Children.Add(Txt(items[i].Item1, 12, Text, FontWeight.SemiBold));
+            body.Children.Add(Txt(items[i].Item2, 10, Muted));
             var tile = Tile(body);
-            Grid.SetColumn(tile, i % 3); Grid.SetRow(tile, i / 3); techniques.Children.Add(tile);
+            tile.Padding = new Thickness(9, 11);
+            Grid.SetColumn(tile, i); techniques.Children.Add(tile);
         }
         overview.Children.Add(techniques);
 
