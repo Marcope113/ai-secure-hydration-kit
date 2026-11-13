@@ -614,6 +614,7 @@ public sealed class MainWindow : Window
         deployButton.Width = 34;
         deployButton.Height = 34;
         deployButton.Padding = new Thickness(0);
+        deployButton.VerticalContentAlignment = VerticalAlignment.Center;
         deployButton.FontSize = 29;
         deployButton.CornerRadius = new CornerRadius(18);
         deployButton.BorderBrush = Paint("#45C8E8");
@@ -2012,17 +2013,22 @@ public sealed class MainWindow : Window
         }
     }
 
-    private static Avalonia.Controls.Shapes.Path DeployChevron() => new()
+    // Fixed-size canvas prevents Avalonia Path stretching the chevron to fill its bounds.
+    private static Control DeployChevron()
     {
-        Data = Geometry.Parse("M 1 1 L 11 11 L 1 21"),
-        Stroke = Paint("#45C8E8"),
-        StrokeThickness = 2.6,
-        StrokeLineCap = PenLineCap.Round,
-        Width = 8,
-        Height = 15,
-        HorizontalAlignment = HorizontalAlignment.Center,
-        VerticalAlignment = VerticalAlignment.Center
-    };
+        var icon = new Canvas {
+            Width = 14, Height = 18,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        icon.Children.Add(new Avalonia.Controls.Shapes.Path {
+            Data = Geometry.Parse("M 4 4 L 9 9 L 4 14"),
+            Stroke = Paint("#45C8E8"),
+            StrokeThickness = 2.4,
+            StrokeLineCap = PenLineCap.Round
+        });
+        return icon;
+    }
 
     private Control TargetControls(bool hypervisorReady)
     {
@@ -2036,6 +2042,7 @@ public sealed class MainWindow : Window
         deploy.Width = 34;
         deploy.Height = 34;
         deploy.Padding = new Thickness(0);
+        deploy.VerticalContentAlignment = VerticalAlignment.Center;
         deploy.FontSize = 29;
         deploy.CornerRadius = new CornerRadius(18);
         deploy.BorderBrush = Paint("#45C8E8");
