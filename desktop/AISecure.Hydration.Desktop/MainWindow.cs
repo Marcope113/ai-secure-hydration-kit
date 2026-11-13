@@ -240,7 +240,23 @@ public sealed class MainWindow : Window
     private void Header(string section)
     {
         _page.Children.Clear();
-        _page.Children.Add(Txt("// AI SECURE  A C A D E M Y", 21, Accent, FontWeight.Bold));
+        var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        var mark = new Border {
+            Width = 43, Height = 43, CornerRadius = new CornerRadius(11),
+            BorderThickness = new Thickness(2), BorderBrush = Paint(Accent),
+            Background = Paint("#143545"),
+            Child = new TextBlock {
+                Text = "A✦", FontSize = 19, FontWeight = FontWeight.Bold,
+                Foreground = Paint(Accent),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            }
+        };
+        brand.Children.Add(mark);
+        var brandName = Txt("AI SECURE  A C A D E M Y", 21, Accent, FontWeight.Bold);
+        brandName.VerticalAlignment = VerticalAlignment.Center;
+        brand.Children.Add(brandName);
+        _page.Children.Add(brand);
         _page.Children.Add(Txt(section, 12, Muted, FontWeight.SemiBold));
     }
     private void Section(string title) => _page.Children.Add(Txt(title, 16, Accent, FontWeight.Bold));
@@ -289,8 +305,8 @@ public sealed class MainWindow : Window
             frame.Children.Add(content);
             var labels = Stack(3);
             labels.HorizontalAlignment = HorizontalAlignment.Right;
-            labels.VerticalAlignment = VerticalAlignment.Top;
-            labels.Margin = new Thickness(0, 5, 9, 0);
+            labels.VerticalAlignment = layer == "LAYER 03" ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+            labels.Margin = layer == "LAYER 03" ? new Thickness(0, 0, 9, 7) : new Thickness(0, 5, 9, 0);
             labels.IsHitTestVisible = false;
             foreach (var line in new[] { layer, description })
             {
@@ -319,7 +335,7 @@ public sealed class MainWindow : Window
         // Fixed attacker distribution: no selection required.
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Children.Add(_attackerOs);
-        attackerBody.Children.Add(Txt("NOT INSTALLED", 13, Yellow, FontWeight.Bold));
+        attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
         attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,205"), ColumnSpacing = 16 };
@@ -341,6 +357,9 @@ public sealed class MainWindow : Window
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
+        var networkState = Txt("● OFFLINE", 11, Yellow, FontWeight.Bold);
+        networkState.TextAlignment = TextAlignment.Center;
+        link.Children.Add(networkState);
         link.Children.Add(new Button {
             Content = "Configure",
             IsEnabled = false,
@@ -356,7 +375,7 @@ public sealed class MainWindow : Window
         var targetActions = Stack(9);
         targetActions.Children.Add(TargetControls());
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
-            Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
+            "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
             "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
             targetActions);
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,205"), ColumnSpacing = 16 };
