@@ -20,6 +20,7 @@ public sealed class MainWindow : Window
     private string _selected = "kali";
     private bool _installingVirtualBox;
     private bool _removingVirtualBox;
+    private readonly string _isoRoot = ResolveIsoDirectory();
     private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
     private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
     private ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
@@ -73,6 +74,25 @@ public sealed class MainWindow : Window
         b.Click += (_, _) => click();
         return b;
     }
+    private static string ResolveIsoDirectory()
+    {
+        var configured = Environment.GetEnvironmentVariable("AISECURE_KIT_ROOT");
+        var root = !string.IsNullOrWhiteSpace(configured)
+            ? Path.GetFullPath(configured)
+            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        return Path.Combine(root, "downloads", "isos");
+    }
+
+    private void OpenIsoFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(_isoRoot);
+            Process.Start(new ProcessStartInfo(_isoRoot) { UseShellExecute = true });
+        }
+        catch (Exception ex) { _activity.Text = "Cannot open ISO directory: " + ex.Message; }
+    }
+
     private static string State(bool ok) => ok ? "SUPPORTED" : "NOT SUPPORTED";
     private string Existing(string name) => File.Exists(Path.Combine(_root, name)) ? "Found" : "Not found";
 
@@ -170,6 +190,14 @@ public sealed class MainWindow : Window
             TargetControls());
         Grid.SetColumn(target, 2); network.Children.Add(target);
         _page.Children.Add(network);
+        var topologyFlow = Txt("GUEST LAYER   Attacker  ⇄  aisecurelab  ⇄  Victim", 12, Accent, FontWeight.SemiBold);
+        topologyFlow.TextAlignment = TextAlignment.Center;
+        topologyFlow.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _page.Children.Add(topologyFlow);
+        var layerArrow = Txt("↓  hosted by  ↓", 12, Muted, FontWeight.SemiBold);
+        layerArrow.TextAlignment = TextAlignment.Center;
+        layerArrow.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _page.Children.Add(layerArrow);
 
         // The hypervisor is the foundation beneath both guest machines.
         var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -201,6 +229,10 @@ public sealed class MainWindow : Window
             foundationInfo.Children.Add(installHypervisor);
         }
         _page.Children.Add(Tile(foundationInfo, "#122432"));
+        var hostArrow = Txt("↓  runs on  ↓", 12, Muted, FontWeight.SemiBold);
+        hostArrow.TextAlignment = TextAlignment.Center;
+        hostArrow.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _page.Children.Add(hostArrow);
         // Physical host is the bottom layer of the topology, beneath VirtualBox.
         // Host hardware and OS are the physical foundation of the VM stack.
         var build = Environment.OSVersion.Version.Build;
@@ -229,6 +261,12 @@ public sealed class MainWindow : Window
         pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(pendingHostChecks);
         _page.Children.Add(Tile(physicalHost, "#101E2C"));
+
+        var isoLocation = Stack(7);
+        isoLocation.Children.Add(Txt("ISO STORAGE  /  HYDRATION KIT", 13, Accent, FontWeight.Bold));
+        isoLocation.Children.Add(Txt(_isoRoot, 13, Text));
+        isoLocation.Children.Add(Button("Open ISO Folder", OpenIsoFolder));
+        _page.Children.Add(Tile(isoLocation, "#122432"));
 
         _page.Children.Add(Txt("SETUP ORDER   1. VirtualBox  >  2. Attacker / Target VMs  >  3. Isolated network validation",
             12, Accent));
