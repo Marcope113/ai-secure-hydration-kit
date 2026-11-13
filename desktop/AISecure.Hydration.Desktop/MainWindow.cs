@@ -65,6 +65,7 @@ public sealed class MainWindow : Window
         _selected = "kali";
         _distro.SelectedIndex = 0;
         ShowSetup();
+        Dispatcher.UIThread.Post(() => _ = DetectRegisteredKaliAsync());
         // Revalidate previously downloaded images when the application starts.
         // The installer must not depend on the download having occurred in this session.
         Dispatcher.UIThread.Post(() => {
@@ -441,6 +442,7 @@ public sealed class MainWindow : Window
         _circuitTimer = null;
         _pulseSegments.Clear();
         _pulseBright = false;
+        Dispatcher.UIThread.Post(() => _ = DetectRegisteredKaliAsync());
         // Progress is model state; controls belong to one page instance only.
         // Never reparent an existing TextBlock or ProgressBar during Refresh.
         _attackerProgressText = Txt(_kaliStatus, 11, Muted);
@@ -928,6 +930,68 @@ public sealed class MainWindow : Window
             _extractedKaliButton.BorderBrush = Paint(Green);
             ToolTip.SetTip(_extractedKaliButton, folder);
         }
+    }
+
+    private async Task DetectRegisteredKaliAsync()
+    {
+        if (_installingAttacker) return;
+        var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Oracle", "VirtualBox", "VBoxManage.exe");
+        if (!File.Exists(vbox)) return;
+        try
+        {
+            var start = new ProcessStartInfo(vbox) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            start.ArgumentList.Add("list");
+            start.ArgumentList.Add("vms");
+            using var p = Process.Start(start);
+            if (p is null) return;
+            var outputTask = p.StandardOutput.ReadToEndAsync();
+            var errorTask = p.StandardError.ReadToEndAsync();
+            await p.WaitForExitAsync();
+            var output = await outputTask;
+            await errorTask;
+            if (p.ExitCode != 0) return;
+            var matches = System.Text.RegularExpressions.Regex.Matches(output,
+                @"(?im)^""([^""]*kali-linux[^""]*)""\s+\{([a-f0-9-]+)\}");
+            if (matches.Count != 1) return;
+            var uuid = matches[0].Groups[2].Value;
+            var infoStart = new ProcessStartInfo(vbox) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            foreach (var arg in new[] { "showvminfo", uuid, "--machinereadable" })
+                infoStart.ArgumentList.Add(arg);
+            using var info = Process.Start(infoStart);
+            if (info is null) return;
+            var infoTextTask = info.StandardOutput.ReadToEndAsync();
+            var infoErrorTask = info.StandardError.ReadToEndAsync();
+            await info.WaitForExitAsync();
+            var details = await infoTextTask;
+            await infoErrorTask;
+            if (info.ExitCode != 0) return;
+            // Registration alone is not configuration: require internal networking.
+            if (!details.Contains("nic1=\"intnet\"", StringComparison.OrdinalIgnoreCase) ||
+                !details.Contains("intnet1=\"aisecurelab\"", StringComparison.OrdinalIgnoreCase))
+                return;
+            if (_kaliConfigured) return;
+            _kaliConfigured = true;
+            _kaliStatus = "Kali registered and configured - guest verification pending";
+            _kaliPercent = 100;
+            _attackerProgressText.Text = _kaliStatus;
+            _attackerProgress.Value = 100;
+            if (_installAttackerButton is not null)
+            {
+                _installAttackerButton.Content = "Open Kali";
+                _installAttackerButton.BorderBrush = Paint(Green);
+                _installAttackerButton.IsEnabled = true;
+            }
+            // Rebuild the card only once when the registration is discovered.
+            if (!_installingAttacker) ShowSetup();
+        }
+        catch { /* Diagnostics are best-effort; keep manual install available. */ }
     }
 
     private async Task OpenKaliVirtualBoxAsync()
