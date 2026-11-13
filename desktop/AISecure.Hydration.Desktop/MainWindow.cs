@@ -413,7 +413,7 @@ public sealed class MainWindow : Window
         hostTitle.TextAlignment = TextAlignment.Center;
         hostTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(hostTitle);
-        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 12 };
+        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*"), ColumnSpacing = 12 };
         var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
             "Windows 11 x64 is required for this Windows preview.", null);
         var diskTile = Requirement("DISK SPACE", $"{free:F1} GB free", diskOk ? "SUPPORTED" : "NOT ENOUGH SPACE", diskOk ? Green : Red,
@@ -428,6 +428,12 @@ public sealed class MainWindow : Window
             physicalRam is null ? Yellow : ramOk ? Green : Yellow,
             "8 GB or more is recommended for running Kali and Debian together.", null);
         Grid.SetColumn(ramTile, 2); hostSpecs.Children.Add(ramTile);
+        var logicalProcessors = Environment.ProcessorCount;
+        var cpuTile = Requirement("LOGICAL PROCESSORS", logicalProcessors.ToString(),
+            logicalProcessors >= 4 ? "SUPPORTED" : "4 RECOMMENDED",
+            logicalProcessors >= 4 ? Green : Yellow,
+            "Four logical processors or more are recommended for running both VMs.", null);
+        Grid.SetColumn(cpuTile, 3); hostSpecs.Children.Add(cpuTile);
         physicalHost.Children.Add(hostSpecs);
         var pendingHostChecks = Txt("CPU virtualization: verification pending", 12, Muted);
         pendingHostChecks.TextAlignment = TextAlignment.Center;
