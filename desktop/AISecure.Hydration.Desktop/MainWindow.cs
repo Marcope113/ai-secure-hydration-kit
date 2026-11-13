@@ -811,7 +811,7 @@ public sealed class MainWindow : Window
             // Fetch the publisher checksum manifest and verify a matching local file.
             var manifest = await http.GetStringAsync(new Uri(directory, "SHA256SUMS"));
             var expected = System.Text.RegularExpressions.Regex.Matches(manifest,
-                    @"(?im)^([a-f0-9]{64})\\s+\\*?(.+?)\\s*$")
+                    @"(?im)^([a-f0-9]{64})\s+\*?(.+?)\s*$")
                 .Cast<System.Text.RegularExpressions.Match>()
                 .FirstOrDefault(m => Path.GetFileName(m.Groups[2].Value.Trim().TrimStart('*')) == filename)
                 ?.Groups[1].Value.ToLowerInvariant();
