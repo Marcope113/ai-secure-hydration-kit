@@ -568,9 +568,18 @@ public sealed class MainWindow : Window
                 .FirstOrDefault()
             : null;
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        var getKali = Button("Get Kali Image", () => { if (_kaliVerified) OpenIsoFolder(); else _ = DownloadLabImageAsync("kali"); });
-        getKali.IsEnabled = hypervisorReady && !_downloadingKali;
+        var localKaliArchiveExists = Directory.Exists(_isoRoot) &&
+            Directory.GetFiles(_isoRoot, "kali-linux-*-virtualbox-amd64.7z").Length > 0;
+        var getKali = Button("Get Kali Image", () => {
+            if (_kaliVerified || localKaliArchiveExists) OpenIsoFolder();
+            else _ = DownloadLabImageAsync("kali");
+        });
+        getKali.IsEnabled = hypervisorReady && (!_downloadingKali || localKaliArchiveExists);
         if (_kaliVerified) { getKali.Content = "Kali downloaded"; getKali.BorderBrush = Paint(Green); }
+        else if (localKaliArchiveExists) {
+            getKali.Content = "Kali image found";
+            ToolTip.SetTip(getKali, "Open ISO folder. SHA-256 verification may still be running.");
+        }
         _kaliDownloadButton = getKali;
         attackerActions.Children.Add(getKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
@@ -1035,7 +1044,7 @@ public sealed class MainWindow : Window
                 return;
             if (_kaliConfigured) return;
             _kaliConfigured = true;
-            _kaliStatus = "Kali registered and configured - guest verification pending";
+            if (!_kaliVerified) _kaliStatus = "Kali registered and configured - guest verification pending";
             _kaliPercent = 100;
             _attackerProgressText.Text = _kaliStatus;
             _attackerProgress.Value = 100;
@@ -1397,7 +1406,9 @@ public sealed class MainWindow : Window
             SetInstallationProgress(kali ? "Attacker" : "Target", message, percent);
         }
         var actionButton = kali ? _kaliDownloadButton : _debianDownloadButton;
-        if (actionButton is not null) actionButton.IsEnabled = false;
+        if (actionButton is not null)
+            actionButton.IsEnabled = kali && Directory.Exists(_isoRoot) &&
+                Directory.GetFiles(_isoRoot, "kali-linux-*-virtualbox-amd64.7z").Length > 0;
         Status("Checking latest official image...", 0);
         try
         {
