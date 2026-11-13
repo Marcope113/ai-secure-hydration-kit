@@ -33,6 +33,8 @@ public sealed class MainWindow : Window
     private bool _deployingKali;
     private Button? _deployKaliButton;
     private bool _kaliRunning;
+    private Border? _openKaliStage;
+    private TextBlock? _openKaliStageMark;
     private bool _checkingKaliRuntime;
     private TextBlock? _kaliRuntimeLabel;
     private Border? _kaliOuterTile;
@@ -588,13 +590,22 @@ public sealed class MainWindow : Window
         _deployKaliButton = deployButton;
         deployArea.Children.Add(deployButton);
         var lead = new Border { Width = 15, Height = 2, Background = Paint("#4DA5B5"),
-            VerticalAlignment = VerticalAlignment.Center };
+            VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 15, 0, 0) };
         deployArea.Children.Add(lead);
         var pipeline = new Grid {
             ColumnDefinitions = new ColumnDefinitions("61,18,61,18,61"),
             RowDefinitions = new RowDefinitions("32,Auto"),
             RowSpacing = 3
         };
+        // A single continuous bus behind the milestones, centered on each circle.
+        var bus = new Border {
+            Height = 2, Background = Paint("#4DA5B5"),
+            Margin = new Thickness(30, 0, 30, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetRow(bus, 0);
+        Grid.SetColumnSpan(bus, 5);
+        pipeline.Children.Add(bus);
         Border Stage(int column, string label, bool completed, bool available, Action click, string hint)
         {
             var mark = Txt(completed ? "✓" : "", 13, completed ? "#102A25" : Muted, FontWeight.Bold);
@@ -629,14 +640,14 @@ public sealed class MainWindow : Window
             _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder),
             () => { if (_installedKaliFolder is not null) OpenStoragePath(_installedKaliFolder); },
             _installedKaliFolder ?? "Extraction pending");
-        var openStage = Stage(4, "Open Kali", _kaliConfigured, _kaliConfigured,
+        var openStage = Stage(4, "Open Kali", _kaliRunning, _kaliConfigured,
             () => _ = OpenKaliVirtualBoxAsync(), "Start Kali in VirtualBox");
-        foreach (var column in new[] { 1, 3 })
+        _openKaliStage = openStage;
+        _openKaliStageMark = (TextBlock)openStage.Child!;
+        if (_kaliConfigured && !_kaliRunning)
         {
-            var connector = new Border { Height = 2, Background = Paint("#4DA5B5"),
-                VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetColumn(connector, column);
-            pipeline.Children.Add(connector);
+            openStage.BorderBrush = Paint("#45C8E8");
+            openStage.Background = Paint("#1D4257");
         }
         deployArea.Children.Add(pipeline);
         // These legacy controls are not used by the new milestone visualization.
@@ -903,6 +914,8 @@ public sealed class MainWindow : Window
             if (++_runtimePollTicks % 7 == 0) _ = RefreshKaliRuntimeAsync();
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
+            if (_openKaliStage is not null && _kaliConfigured && !_kaliRunning)
+                _openKaliStage.BorderBrush = Paint(circuitOverlay.Bright ? "#79E7FF" : "#287A98");
             // Configured Kali stays solid green; only pending connections pulse.
             if (_kaliConfigured)
             {
@@ -1076,6 +1089,15 @@ public sealed class MainWindow : Window
                 _kaliRuntimeLabel.Text = running ? "● ONLINE" : "● OFFLINE";
                 _kaliRuntimeLabel.Foreground = Paint(running ? Green : Yellow);
                 if (_kaliOuterTile is not null) _kaliOuterTile.BorderBrush = Paint(running ? Green : Yellow);
+                if (_openKaliStage is not null)
+                {
+                    _openKaliStage.BorderBrush = Paint(running ? Green : _kaliConfigured ? "#45C8E8" : "#668196");
+                    _openKaliStage.Background = Paint(running ? Green : "#263D50");
+                    if (_openKaliStageMark is not null) {
+                        _openKaliStageMark.Text = running ? "✓" : "";
+                        _openKaliStageMark.Foreground = Paint(running ? "#102A25" : Muted);
+                    }
+                }
             }
         }
         catch { /* Leave last known status if VirtualBox cannot be queried. */ }
