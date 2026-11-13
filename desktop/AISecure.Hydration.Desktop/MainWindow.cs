@@ -593,16 +593,27 @@ public sealed class MainWindow : Window
             Directory.GetFiles(_isoRoot, "kali-linux-*-virtualbox-amd64.7z").Length > 0;
         var deployArea = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
         deployArea.VerticalAlignment = VerticalAlignment.Center;
-        var deployButton = Button(_deployingKali ? "Deploying..." : "Deploy Kali Linux",
-            () => _ = DeployKaliAsync());
-        deployButton.IsEnabled = hypervisorReady && !_deployingKali;
-        _deployKaliButton = deployButton;
-        deployArea.Children.Add(deployButton);
         var pipeline = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("61,18,61,18,61"),
-            RowDefinitions = new RowDefinitions("32,Auto"),
-            RowSpacing = 3
+            ColumnDefinitions = new ColumnDefinitions("76,14,61,14,61,14,61"),
+            RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
         };
+        var deployButton = Button("➜", () => _ = DeployKaliAsync());
+        deployButton.Width = 28;
+        deployButton.Height = 28;
+        deployButton.Padding = new Thickness(0);
+        deployButton.FontSize = 16;
+        deployButton.CornerRadius = new CornerRadius(15);
+        deployButton.BorderBrush = Paint("#45C8E8");
+        deployButton.Foreground = Paint("#45C8E8");
+        deployButton.IsEnabled = hypervisorReady && !_deployingKali;
+        deployButton.HorizontalAlignment = HorizontalAlignment.Center;
+        deployButton.VerticalAlignment = VerticalAlignment.Center;
+        _deployKaliButton = deployButton;
+        pipeline.Children.Add(deployButton);
+        var deployCaption = Txt("Deploy Kali Linux", 10, "#45C8E8", FontWeight.SemiBold);
+        deployCaption.TextAlignment = TextAlignment.Center;
+        Grid.SetRow(deployCaption, 1);
+        pipeline.Children.Add(deployCaption);
         Border Stage(int column, string label, bool completed, bool available, Action click, string hint)
         {
             var mark = Txt(completed ? "✓" : "", 13, completed ? "#102A25" : Muted, FontWeight.Bold);
@@ -630,14 +641,14 @@ public sealed class MainWindow : Window
             pipeline.Children.Add(caption);
             return circle;
         }
-        var downloadStage = Stage(0, "Download", localKaliArchiveExists, localKaliArchiveExists,
+        var downloadStage = Stage(2, "Download", localKaliArchiveExists, localKaliArchiveExists,
             OpenIsoFolder, "Open downloaded Kali image folder");
-        var extractedStage = Stage(2, "Extracted",
+        var extractedStage = Stage(4, "Extracted",
             _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder),
             _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder),
             () => { if (_installedKaliFolder is not null) OpenStoragePath(_installedKaliFolder); },
             _installedKaliFolder ?? "Extraction pending");
-        var openStage = Stage(4, "Open Kali", _kaliRunning || _kaliLaunchRequested, _kaliConfigured,
+        var openStage = Stage(6, "Open Kali", _kaliRunning || _kaliLaunchRequested, _kaliConfigured,
             () => _ = OpenKaliVirtualBoxAsync(), "Start Kali in VirtualBox");
         _openKaliStage = openStage;
         _openKaliStageMark = (TextBlock)openStage.Child!;
@@ -648,11 +659,11 @@ public sealed class MainWindow : Window
         }
         deployArea.Children.Add(pipeline);
         var deployLayout = new Grid();
-        var deployLine = new DeployConnector { StartButton = deployButton, FinalStage = openStage, MilestonePanel = pipeline,
+        var deployLine = new DeployConnector { StartButton = deployButton, FinalStage = openStage, MilestonePanel = null,
             IsHitTestVisible = false };
         deployLayout.Children.Add(deployLine);
         deployLayout.Children.Add(deployArea);
-        deployLayout.LayoutUpdated += (_, _) => { deployLine.AlignMilestones(); deployLine.InvalidateVisual(); };
+        deployLayout.LayoutUpdated += (_, _) => deployLine.InvalidateVisual();
         // These legacy controls are not used by the new milestone visualization.
         _kaliDownloadButton = null;
         _extractedKaliButton = null;
@@ -1450,7 +1461,7 @@ public sealed class MainWindow : Window
     {
         if (_deployingKali) return;
         _deployingKali = true;
-        if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = false; _deployKaliButton.Content = "Deploying..."; }
+        if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = false; _deployKaliButton.Content = "…"; }
         try
         {
             if (!_kaliVerified || _verifiedKaliPath is null || !File.Exists(_verifiedKaliPath))
@@ -1472,7 +1483,7 @@ public sealed class MainWindow : Window
         finally
         {
             _deployingKali = false;
-            if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = true; _deployKaliButton.Content = "Deploy Kali Linux"; }
+            if (_deployKaliButton is not null) { _deployKaliButton.IsEnabled = true; _deployKaliButton.Content = "➜"; }
         }
     }
 
@@ -1929,15 +1940,27 @@ public sealed class MainWindow : Window
     private Control TargetControls(bool hypervisorReady)
     {
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
-        var deploy = Button(_deployingDebian ? "Downloading..." : "Deploy Debian",
-            () => _ = DeployDebianAsync());
-        deploy.IsEnabled = hypervisorReady && !_deployingDebian;
-        _deployDebianButton = deploy;
-        actions.Children.Add(deploy);
         var pipeline = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("53,12,53,12,65"),
+            ColumnDefinitions = new ColumnDefinitions("69,10,47,10,47,10,62"),
             RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
         };
+        var deploy = Button("➜", () => _ = DeployDebianAsync());
+        deploy.Width = 28;
+        deploy.Height = 28;
+        deploy.Padding = new Thickness(0);
+        deploy.FontSize = 16;
+        deploy.CornerRadius = new CornerRadius(15);
+        deploy.BorderBrush = Paint("#45C8E8");
+        deploy.Foreground = Paint("#45C8E8");
+        deploy.IsEnabled = hypervisorReady && !_deployingDebian;
+        deploy.HorizontalAlignment = HorizontalAlignment.Center;
+        deploy.VerticalAlignment = VerticalAlignment.Center;
+        _deployDebianButton = deploy;
+        pipeline.Children.Add(deploy);
+        var deployCaption = Txt("Deploy Debian", 9, "#45C8E8", FontWeight.SemiBold);
+        deployCaption.TextAlignment = TextAlignment.Center;
+        Grid.SetRow(deployCaption, 1);
+        pipeline.Children.Add(deployCaption);
         Border? lastStage = null;
         void Stage(int col, string name, bool completed, bool enabled, Action click, string hint)
         {
@@ -1968,16 +1991,16 @@ public sealed class MainWindow : Window
         }
         var isoExists = Directory.Exists(_isoRoot) &&
             Directory.GetFiles(_isoRoot, "debian-*-amd64-netinst.iso").Length > 0;
-        Stage(0, "Download", _debianVerified, isoExists, OpenIsoFolder, "Open Debian ISO folder");
-        Stage(2, "Install", false, false, () => {}, "Automated Debian installation not yet implemented");
-        Stage(4, "Open Debian", false, false, () => {}, "Available after Debian installation");
+        Stage(2, "Download", _debianVerified, isoExists, OpenIsoFolder, "Open Debian ISO folder");
+        Stage(4, "Install", false, false, () => {}, "Automated Debian installation not yet implemented");
+        Stage(6, "Open Debian", false, false, () => {}, "Available after Debian installation");
         actions.Children.Add(pipeline);
         var layout = new Grid();
-        var connector = new DeployConnector { StartButton = deploy, FinalStage = lastStage, MilestonePanel = pipeline,
+        var connector = new DeployConnector { StartButton = deploy, FinalStage = lastStage, MilestonePanel = null,
             IsHitTestVisible = false };
         layout.Children.Add(connector);
         layout.Children.Add(actions);
-        layout.LayoutUpdated += (_, _) => { connector.AlignMilestones(); connector.InvalidateVisual(); };
+        layout.LayoutUpdated += (_, _) => connector.InvalidateVisual();
         _debianDownloadButton = null;
         return layout;
     }
@@ -1988,7 +2011,7 @@ public sealed class MainWindow : Window
         _deployingDebian = true;
         if (_deployDebianButton is not null) {
             _deployDebianButton.IsEnabled = false;
-            _deployDebianButton.Content = "Downloading...";
+            _deployDebianButton.Content = "…";
         }
         try
         {
@@ -2001,7 +2024,7 @@ public sealed class MainWindow : Window
             _deployingDebian = false;
             if (_deployDebianButton is not null) {
                 _deployDebianButton.IsEnabled = true;
-                _deployDebianButton.Content = "Deploy Debian";
+                _deployDebianButton.Content = "➜";
             }
         }
     }
