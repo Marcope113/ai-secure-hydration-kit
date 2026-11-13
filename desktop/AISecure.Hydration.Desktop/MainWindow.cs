@@ -73,20 +73,31 @@ public sealed class MainWindow : Window
         _page.Children.Add(Tile(overview));
 
         Section("VIRTUAL LAB TOPOLOGY");
-        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,110,*"), ColumnSpacing = 12 };
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
         attackerControls.Children.Add(_distro);
         attackerControls.Children.Add(Button("Save selection", SaveSelection));
         var attacker = Machine("[>_]", "ATTACKER", _selected == "parrot" ? "Parrot Security OS" : "Kali Linux",
             "NOT INSTALLED", Yellow, "IP ADDRESS   Not assigned\nOS VERSION   Not detected", attackerControls);
         Grid.SetColumn(attacker, 0); network.Children.Add(attacker);
-        var link = Stack(5);
+        var link = Stack(8);
         link.VerticalAlignment = VerticalAlignment.Center;
-        link.HorizontalAlignment = HorizontalAlignment.Center;
-        link.Children.Add(Txt("<------>", 20, Accent, FontWeight.Bold));
-        link.Children.Add(Txt("INTERNAL", 11, Muted));
-        link.Children.Add(Txt("aisecurelab", 11, Muted));
-        Grid.SetColumn(link, 1); network.Children.Add(link);
+        link.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var networkName = Txt("aisecurelab", 13, Text, FontWeight.SemiBold);
+        networkName.TextAlignment = TextAlignment.Center;
+        var networkType = Txt("INTERNAL NETWORK", 10, Muted);
+        networkType.TextAlignment = TextAlignment.Center;
+        var networkArrow = Txt("<------>", 20, Accent, FontWeight.Bold);
+        networkArrow.TextAlignment = TextAlignment.Center;
+        link.Children.Add(networkArrow);
+        link.Children.Add(networkName);
+        link.Children.Add(networkType);
+        var linkTile = new Border {
+            Background = Paint("#122432"), CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(9, 14), VerticalAlignment = VerticalAlignment.Center,
+            Child = link
+        };
+        Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
             "IP ADDRESS   Not assigned\nOS VERSION   Not verified\nMEDIA   Debian 13.7.0 ISO");
