@@ -168,6 +168,29 @@ public sealed class MainWindow : Window
             TargetControls());
         Grid.SetColumn(target, 2); network.Children.Add(target);
         _page.Children.Add(network);
+
+        // The hypervisor is the foundation beneath both guest machines.
+        var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Oracle", "VirtualBox", "VBoxManage.exe");
+        var hypervisorReady = File.Exists(hypervisorPath);
+        var foundation = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16 };
+        var foundationInfo = Stack(5);
+        foundationInfo.Children.Add(Txt("HYPERVISOR  /  ORACLE VIRTUALBOX", 14, Accent, FontWeight.Bold));
+        foundationInfo.Children.Add(Txt("Virtualization layer hosting Attacker + Victim VMs", 13, Muted));
+        foundationInfo.Children.Add(Txt(hypervisorReady ? "SUPPORTED  -  INSTALLED" : "NOT INSTALLED  -  REQUIRED FIRST",
+            13, hypervisorReady ? Green : Red, FontWeight.Bold));
+        Grid.SetColumn(foundationInfo, 0);
+        foundation.Children.Add(foundationInfo);
+        if (!hypervisorReady)
+        {
+            var installHypervisor = Button("Install VirtualBox", () => _ = InstallVirtualBoxAsync());
+            installHypervisor.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(installHypervisor, 1);
+            foundation.Children.Add(installHypervisor);
+        }
+        _page.Children.Add(Tile(foundation, "#122432"));
+        _page.Children.Add(Txt("SETUP ORDER   1. VirtualBox  >  2. Attacker / Target VMs  >  3. Isolated network validation",
+            12, Accent));
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
         Section("TECHNIQUES COVERED");
