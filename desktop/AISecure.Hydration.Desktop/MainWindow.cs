@@ -18,10 +18,10 @@ public sealed class MainWindow : Window
     private TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
     private Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
     private string _selected = "kali";
-    private readonly TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
-    private readonly TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
-    private readonly ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
-    private readonly ProgressBar _targetProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
+    private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
+    private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
+    private ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
+    private ProgressBar _targetProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
     private TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
 
 
@@ -95,6 +95,12 @@ public sealed class MainWindow : Window
 
     private void ShowSetup()
     {
+        // Progress is model state; controls belong to one page instance only.
+        // Never reparent an existing TextBlock or ProgressBar during Refresh.
+        _attackerProgressText = Txt("Waiting to install", 11, Muted);
+        _targetProgressText = Txt("Waiting to install", 11, Muted);
+        _attackerProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
+        _targetProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
         // Create fresh controls for each page build. Avalonia controls cannot
         // be attached to multiple logical parents after a rebuild.
         _distro = new ComboBox { ItemsSource = new[] { "Kali Linux", "Parrot Security OS" }, SelectedIndex = _selected == "parrot" ? 1 : 0, MinWidth = 210 };
