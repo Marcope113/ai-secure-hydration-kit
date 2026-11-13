@@ -69,7 +69,7 @@ public sealed class MainWindow : Window
         body.Children.Add(Txt(symbol + "   " + role, 15, color, FontWeight.Bold));
         body.Children.Add(titleOverride ?? Txt(name, 22, Text, FontWeight.SemiBold));
         body.Children.Add(Txt(state, 13, color, FontWeight.Bold));
-        body.Children.Add(Txt(details, 13, Muted));
+        body.Children.Add(Txt(details, 16, Muted));
         if (action is not null) body.Children.Add(action);
         return Tile(body);
     }
@@ -94,11 +94,20 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB TOPOLOGY");
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
-        
-        attackerControls.Children.Add(_distro);
         attackerControls.Children.Add(Button("Save selection", SaveSelection));
-        var attacker = Machine("[>_]", "ATTACKER", _selected == "parrot" ? "Parrot Security OS" : "Kali Linux",
-            "NOT INSTALLED", Yellow, "PLANNED IP   10.4.4.10\nOS VERSION   Not installed", attackerControls, _attackerOs);
+        var attackerBody = Stack(10);
+        var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+        var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
+        Grid.SetColumn(attackerRole, 0);
+        attackerHeader.Children.Add(attackerRole);
+        Grid.SetColumn(_distro, 1);
+        attackerHeader.Children.Add(_distro);
+        attackerBody.Children.Add(attackerHeader);
+        attackerBody.Children.Add(_attackerOs);
+        attackerBody.Children.Add(Txt("NOT INSTALLED", 13, Yellow, FontWeight.Bold));
+        attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 16, Muted));
+        attackerBody.Children.Add(attackerControls);
+        var attacker = Tile(attackerBody);
         Grid.SetColumn(attacker, 0); network.Children.Add(attacker);
         var link = Stack(8);
         link.VerticalAlignment = VerticalAlignment.Center;
