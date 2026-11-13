@@ -954,7 +954,7 @@ public sealed class MainWindow : Window
             Background = Paint("#0D1E2D"), CornerRadius = new CornerRadius(18),
             BorderBrush = Paint("#35566B"), BorderThickness = new Thickness(1),
             Padding = new Thickness(9), Child = topology,
-            MaxWidth = 1490, HorizontalAlignment = HorizontalAlignment.Center
+            Width = 1450, MaxWidth = 1490, HorizontalAlignment = HorizontalAlignment.Center
         };
         _page.Children.Add(architecturePanel);
 
@@ -2001,10 +2001,10 @@ public sealed class MainWindow : Window
     {
         Data = Geometry.Parse("M 1 1 L 11 11 L 1 21"),
         Stroke = Paint("#45C8E8"),
-        StrokeThickness = 3.2,
+        StrokeThickness = 2.8,
         StrokeLineCap = PenLineCap.Round,
-        Width = 13,
-        Height = 22,
+        Width = 10,
+        Height = 18,
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center
     };
