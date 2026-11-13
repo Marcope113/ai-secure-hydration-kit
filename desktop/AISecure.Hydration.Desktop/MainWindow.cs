@@ -420,7 +420,7 @@ public sealed class MainWindow : Window
             }
         };
         brand.Children.Add(mark);
-        var brandName = Txt("AI SECURE  A C A D E M Y", 21, Accent, FontWeight.Bold);
+        var brandName = Txt("AI SECURE ACADEMY", 21, Accent, FontWeight.Bold);
         brandName.VerticalAlignment = VerticalAlignment.Center;
         brand.Children.Add(brandName);
         _page.Children.Add(brand);
