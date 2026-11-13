@@ -70,7 +70,17 @@ public sealed class MainWindow : Window
     private static TextBlock Txt(string value, double size = 14, string color = Text, FontWeight weight = FontWeight.Normal) =>
         new() { Text = value, FontSize = size, Foreground = Paint(color), FontWeight = weight, TextWrapping = TextWrapping.Wrap };
     private static Border Tile(Control child, string background = "#24394D") =>
-        new() { Background = Paint(background), CornerRadius = new CornerRadius(12), Padding = new Thickness(19), Child = child };
+        new() {
+            Background = Paint(background), CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(19), Child = child,
+            BorderBrush = Paint("#355368"), BorderThickness = new Thickness(1)
+        };
+
+    private static void SetReadyOutline(Border tile, bool ready)
+    {
+        tile.BorderBrush = Paint(ready ? "#69DFA7" : "#355368");
+        tile.BorderThickness = new Thickness(ready ? 2 : 1);
+    }
     private static StackPanel Stack(int gap = 9) => new() { Spacing = gap };
     private static Button Button(string title, Action click)
     {
@@ -478,6 +488,7 @@ public sealed class MainWindow : Window
         attackerProgressArea.Children.Add(_attackerProgress);
         attackerCard.Children.Add(attackerProgressArea);
         var attacker = Tile(attackerCard); attacker.Padding = new Thickness(7);
+        SetReadyOutline(attacker, false); // No verified attacker VM yet.
         var attackerLayer = WithLayer(attacker, "LAYER 03", "Virtual Machines  /  Attacker");
         Grid.SetColumn(attackerLayer, 0); network.Children.Add(attackerLayer);
         var link = Stack(3);
@@ -504,6 +515,7 @@ public sealed class MainWindow : Window
         link.Children.Add(configureNetwork);
         var linkTile = new Border {
             Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
+            BorderBrush = Paint("#355368"), BorderThickness = new Thickness(1),
             Padding = new Thickness(9, 9), VerticalAlignment = VerticalAlignment.Center,
             Child = link
         };
@@ -534,6 +546,7 @@ public sealed class MainWindow : Window
         targetProgressArea.Children.Add(_targetProgress);
         targetCard.Children.Add(targetProgressArea);
         var targetTile = Tile(targetCard); targetTile.Padding = new Thickness(7);
+        SetReadyOutline(targetTile, false); // ISO attachment is not VM validation.
         var targetLayer = WithLayer(targetTile, "LAYER 03", "Virtual Machines  /  Victim");
         Grid.SetColumn(targetLayer, 2); network.Children.Add(targetLayer);
         layers.Children.Add(network);
@@ -571,7 +584,9 @@ public sealed class MainWindow : Window
             installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(installHypervisor);
         }
-        var foundationTile = WithLayer(Tile(foundationInfo, "#20384A"), "LAYER 02", "Hypervisor  /  Virtualization platform");
+        var foundationCard = Tile(foundationInfo, "#20384A");
+        SetReadyOutline(foundationCard, hypervisorReady);
+        var foundationTile = WithLayer(foundationCard, "LAYER 02", "Hypervisor  /  Virtualization platform");
         layers.Children.Add(foundationTile);
         // Physical host is the bottom layer of the topology, beneath VirtualBox.
         // Host hardware and OS are the physical foundation of the VM stack.
@@ -617,7 +632,10 @@ public sealed class MainWindow : Window
         physicalHost.Children.Add(hostSpecs);
         // Only confirmed host prerequisites and installed hypervisor turn this link green.
 
-        var hostTile = WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system");
+        var hostReady = archOk && diskOk && ramOk && logicalProcessors >= 4;
+        var hostCard = Tile(physicalHost, "#1B3042");
+        SetReadyOutline(hostCard, hostReady);
+        var hostTile = WithLayer(hostCard, "LAYER 01", "Physical Host  /  Hardware and operating system");
         layers.Children.Add(hostTile);
         // One overlay draws all connections using live control positions.
         var circuitOverlay = new TopologyConnections {
@@ -817,7 +835,9 @@ public sealed class MainWindow : Window
                 body.Children.Add(Button(_installingVirtualBox ? "Installing..." : "Install", () => _ = InstallVirtualBoxAsync()));
             body.Children.Add(Button("Manual instructions", () => ShowInstructions(title, manual)));
         }
-        return Tile(body);
+        var requirementTile = Tile(body);
+        SetReadyOutline(requirementTile, status == "SUPPORTED");
+        return requirementTile;
     }
 
     private Window ShowVirtualBoxProgress(string action)
