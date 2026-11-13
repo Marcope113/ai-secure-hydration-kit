@@ -18,10 +18,12 @@ public sealed class MainWindow : Window
     private TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
     private Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
     private string _selected = "kali";
-    private readonly TextBlock _progressTitle = Txt("No installation running", 13, Text, FontWeight.SemiBold);
-    private readonly TextBlock _progressStatus = Txt("Waiting for a provisioning task", 12, Muted);
-    private readonly ProgressBar _progressBar = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 8, IsIndeterminate = false };
-
+    private readonly TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
+    private readonly TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
+    private readonly TextBlock _networkProgressText = Txt("Waiting to configure", 10, Muted);
+    private readonly ProgressBar _attackerProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
+    private readonly ProgressBar _targetProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
+    private readonly ProgressBar _networkProgress = new() { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
     private TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
 
 
@@ -30,21 +32,7 @@ public sealed class MainWindow : Window
         Title = "AI Secure Academy | Hydration Kit";
         Width = 1160; Height = 840; MinWidth = 800; MinHeight = 580;
         Background = Paint("#0B1520");
-        var layout = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
-        var scroller = new ScrollViewer { Content = _page };
-        Grid.SetRow(scroller, 0);
-        layout.Children.Add(scroller);
-        var dock = new Grid { ColumnDefinitions = new ColumnDefinitions("*,370"), Margin = new Thickness(20, 8, 24, 16) };
-        var progressStack = Stack(7);
-        progressStack.Children.Add(_progressTitle);
-        progressStack.Children.Add(_progressStatus);
-        progressStack.Children.Add(_progressBar);
-        var progressTile = Tile(progressStack, "#122432");
-        Grid.SetColumn(progressTile, 1);
-        dock.Children.Add(progressTile);
-        Grid.SetRow(dock, 1);
-        layout.Children.Add(dock);
-        Content = layout;
+        Content = new ScrollViewer { Content = _page };
         var saved = ReadSelection();
         _selected = saved == "parrot" ? "parrot" : "kali";
         _distro.SelectedIndex = _selected == "parrot" ? 1 : 0;
@@ -58,22 +46,20 @@ public sealed class MainWindow : Window
 
     }
 
-    // Provisioning engine will call these methods on the Avalonia UI thread.
-    // Progress is only reported for real work; no artificial completion percentages.
+    // Future provisioning events update only the corresponding tile.
+    // These are intentionally idle until installation operations are implemented.
     private void SetInstallationProgress(string component, string step, double? percent)
     {
-        _progressTitle.Text = component;
-        _progressStatus.Text = step;
-        _progressBar.IsIndeterminate = percent is null;
-        if (percent is not null) _progressBar.Value = Math.Clamp(percent.Value, 0, 100);
-    }
-
-    private void FinishInstallationProgress(string component, bool success, string message)
-    {
-        _progressTitle.Text = component + (success ? " - Complete" : " - Failed");
-        _progressStatus.Text = message;
-        _progressBar.IsIndeterminate = false;
-        if (success) _progressBar.Value = 100;
+        var (bar, label) = component switch
+        {
+            "Attacker" => (_attackerProgress, _attackerProgressText),
+            "Target" => (_targetProgress, _targetProgressText),
+            "Network" => (_networkProgress, _networkProgressText),
+            _ => throw new ArgumentException("Unknown component", nameof(component))
+        };
+        label.Text = step;
+        bar.IsIndeterminate = percent is null;
+        if (percent is not null) bar.Value = Math.Clamp(percent.Value, 0, 100);
     }
 
     private static IBrush Paint(string hex) => new SolidColorBrush(Color.Parse(hex));
@@ -132,6 +118,8 @@ public sealed class MainWindow : Window
         var attackerControls = Stack(8);
         attackerControls.Children.Add(Button("Save selection", SaveSelection));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
+        attackerControls.Children.Add(_attackerProgressText);
+        attackerControls.Children.Add(_attackerProgress);
         var attackerBody = Stack(10);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
@@ -159,6 +147,8 @@ public sealed class MainWindow : Window
         link.Children.Add(networkName);
         link.Children.Add(networkType);
         link.Children.Add(PendingInstall("Configure Network"));
+        link.Children.Add(_networkProgressText);
+        link.Children.Add(_networkProgress);
         var linkTile = new Border {
             Background = Paint("#122432"), CornerRadius = new CornerRadius(10),
             Padding = new Thickness(9, 14), VerticalAlignment = VerticalAlignment.Center,
@@ -167,7 +157,8 @@ public sealed class MainWindow : Window
         Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
-            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO", PendingInstall("Install Target"));
+            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO",
+            TargetControls());
         Grid.SetColumn(target, 2); network.Children.Add(target);
         _page.Children.Add(network);
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
@@ -226,6 +217,15 @@ public sealed class MainWindow : Window
         _page.Children.Add(_next);
         Section("ACTIVITY");
         _page.Children.Add(_activity);
+    }
+
+    private Control TargetControls()
+    {
+        var stack = Stack(8);
+        stack.Children.Add(PendingInstall("Install Target"));
+        stack.Children.Add(_targetProgressText);
+        stack.Children.Add(_targetProgress);
+        return stack;
     }
 
     private static Button PendingInstall(string title) =>
