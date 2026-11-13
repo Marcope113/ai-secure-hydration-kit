@@ -23,7 +23,7 @@ $IsoHash='a7ef94ac2fb9a7fec454552abd629b7cc9d5155c886165a45649f5ce6167e355'
 $IsoBase='https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/'
 function Step([int]$Index,[int]$Total,[string]$Message){
  $percent=[int](($Index-1)*100/$Total)
- Write-Progress -Id 1 -Activity "AI Secure Hydration Kit — $Action" -Status "Step $Index/$Total : $Message" -PercentComplete $percent
+ Write-Progress -Id 1 -Activity "AI Secure Hydration Kit - $Action" -Status "Step $Index/$Total : $Message" -PercentComplete $percent
  Write-Host ("[{0}/{1}] {2}" -f $Index,$Total,$Message) -ForegroundColor Cyan
 }
 function Complete-Steps {Write-Progress -Id 1 -Activity 'AI Secure Hydration Kit' -Completed}
