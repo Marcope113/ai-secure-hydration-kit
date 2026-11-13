@@ -189,6 +189,29 @@ public sealed class MainWindow : Window
             foundation.Children.Add(installHypervisor);
         }
         _page.Children.Add(Tile(foundation, "#122432"));
+        // Physical host is the bottom layer of the topology, beneath VirtualBox.
+        Section("PHYSICAL HOST  /  SYSTEM REQUIREMENTS");
+        var build = Environment.OSVersion.Version.Build;
+        var windows = OperatingSystem.IsWindows();
+        var architecture = RuntimeInformation.OSArchitecture;
+        var archOk = windows && architecture == Architecture.X64 && build >= 22000;
+        var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
+        var free = drive.AvailableFreeSpace / 1073741824d;
+        var diskOk = free >= 35;
+        var physicalHost = Stack(10);
+        physicalHost.Children.Add(Txt("HOST MACHINE  /  " +
+            (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription), 15, Accent, FontWeight.Bold));
+        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 12 };
+        var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
+            "Windows 11 x64 is required for this Windows preview.", null);
+        var diskTile = Requirement("DISK SPACE", $"{free:F1} GB free", diskOk ? "SUPPORTED" : "NOT ENOUGH SPACE", diskOk ? Green : Red,
+            "Minimum 35 GB free for the initial target VM. More space is recommended for two VMs.", null);
+        Grid.SetColumn(architectureTile, 0); hostSpecs.Children.Add(architectureTile);
+        Grid.SetColumn(diskTile, 1); hostSpecs.Children.Add(diskTile);
+        physicalHost.Children.Add(hostSpecs);
+        physicalHost.Children.Add(Txt("Physical RAM: verification pending  |  CPU virtualization: verification pending", 12, Muted));
+        _page.Children.Add(Tile(physicalHost, "#101E2C"));
+
         _page.Children.Add(Txt("SETUP ORDER   1. VirtualBox  >  2. Attacker / Target VMs  >  3. Isolated network validation",
             12, Accent));
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
@@ -212,34 +235,6 @@ public sealed class MainWindow : Window
             Grid.SetColumn(tile, i % 3); Grid.SetRow(tile, i / 3); techniques.Children.Add(tile);
         }
         _page.Children.Add(techniques);
-
-        Section("HOST REQUIREMENTS");
-        var req = Stack(12);
-        var build = Environment.OSVersion.Version.Build;
-        var windows = OperatingSystem.IsWindows();
-        var architecture = RuntimeInformation.OSArchitecture;
-        var archOk = windows && architecture == Architecture.X64 && build >= 22000;
-        var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
-        var free = drive.AvailableFreeSpace / 1073741824d;
-        var diskOk = free >= 35;
-        // TotalAvailableMemoryBytes is a process limit, not physical RAM. Do not report it as host memory.
-        var vboxPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Oracle", "VirtualBox", "VBoxManage.exe");
-        var vboxOk = File.Exists(vboxPath);
-
-        var summary = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 12 };
-        var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
-            "Windows 11 x64 is required for this Windows preview.", null);
-        var diskTile = Requirement("DISK SPACE", $"{free:F1} GB free", diskOk ? "SUPPORTED" : "NOT ENOUGH SPACE", diskOk ? Green : Red,
-            "Minimum 35 GB free for the initial target VM. More space is recommended for two VMs.", null);
-        var vboxTile = Requirement("VIRTUALBOX", vboxOk ? "Detected" : "Missing", vboxOk ? "SUPPORTED" : "INSTALL REQUIRED", vboxOk ? Green : Red,
-            "Manual installation: https://www.virtualbox.org/wiki/Downloads", vboxOk ? null : "Install VirtualBox");
-        Grid.SetColumn(architectureTile, 0); summary.Children.Add(architectureTile);
-        Grid.SetColumn(diskTile, 1); summary.Children.Add(diskTile);
-        Grid.SetColumn(vboxTile, 2); summary.Children.Add(vboxTile);
-        req.Children.Add(summary);
-        req.Children.Add(Txt("Host: " + (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription) +
-            "  |  Physical RAM: verification pending  |  Virtualization: verification pending", 12, Muted));
-        _page.Children.Add(req);
 
         _page.Children.Add(Button("Refresh diagnostics", ShowSetup));
         Section("ACTIVITY");
