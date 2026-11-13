@@ -11,7 +11,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$Version='0.3.2-preview'
+$Version='0.3.3-preview'
 $Root=Join-Path $env:LOCALAPPDATA 'AISecureAcademy'
 $Manifest=Join-Path $Root 'hydration-state.json'
 $VMManifest=Join-Path $Root 'hydration-v02.json'
@@ -23,27 +23,33 @@ $IsoHash='a7ef94ac2fb9a7fec454552abd629b7cc9d5155c886165a45649f5ce6167e355'
 $IsoBase='https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/'
 function Show-Banner {
  if($Action -eq 'Version'){return}
+ $now=Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
  Write-Host ''
- Write-Host '  =============================================================' -ForegroundColor DarkCyan
- Write-Host '       _    ___   ____  _____ ____ _   _ ____  _____' -ForegroundColor Cyan
- Write-Host '      / \\  |_ _| / ___|| ____/ ___| | | |  _ \\| ____|' -ForegroundColor Cyan
- Write-Host '     / _ \\  | |  \\___ \\|  _|| |   | | | | |_) |  _|' -ForegroundColor Cyan
- Write-Host '    / ___ \\ | |   ___) | |__| |___| |_| |  _ <| |___' -ForegroundColor Cyan
- Write-Host '   /_/   \\_\\___| |____/|_____\\____|\\___/|_| \\_\\_____|' -ForegroundColor Cyan
+ Write-Host '  +================================================================+' -ForegroundColor DarkCyan
+ Write-Host '  |                                                                 |' -ForegroundColor DarkCyan
+ Write-Host '  |   AI SECURE                                                      |' -ForegroundColor Cyan
+ Write-Host '  |   A C A D E M Y                                                  |' -ForegroundColor DarkCyan
+ Write-Host '  |                                                                 |' -ForegroundColor DarkCyan
+ Write-Host '  |   H Y D R A T I O N   K I T                                      |' -ForegroundColor Magenta
+ Write-Host '  |   CYBER LAB PROVISIONING                                        |' -ForegroundColor Gray
+ Write-Host '  |                                                                 |' -ForegroundColor DarkCyan
+ Write-Host '  +================================================================+' -ForegroundColor DarkCyan
  Write-Host ''
- Write-Host '                 H Y D R A T I O N   K I T' -ForegroundColor Magenta
- Write-Host '                 Cyber Lab Provisioning' -ForegroundColor DarkGray
- Write-Host '  =============================================================' -ForegroundColor DarkCyan
- Write-Host ("  RELEASE  {0}   |   OPERATION  {1}" -f $Version,$Action.ToUpperInvariant()) -ForegroundColor Gray
+ Show-Line 'LAB' 'Linux Privilege Escalation'
+ Show-Line 'LAB ID' 'linux-privesc'
+ Show-Line 'VIRTUAL MACHINE' $VMName
+ Show-Line 'DATE / TIME' $now
+ Show-Line 'RELEASE' $Version
+ Show-Line 'OPERATION' $Action.ToUpperInvariant()
  Write-Host ''
  if(-not [Console]::IsOutputRedirected){
   foreach($frame in @('[>.........]','[==>.......]','[====>.....]','[======>...]','[=========>]')){
    Write-Host (([char]13)+'  BOOT SEQUENCE  '+$frame) -NoNewline -ForegroundColor Cyan
-   Start-Sleep -Milliseconds 90
+   Start-Sleep -Milliseconds 75
   }
   Write-Host (([char]13)+'  BOOT SEQUENCE  [ONLINE]      ') -ForegroundColor Green
  }
- Write-Host '  -------------------------------------------------------------' -ForegroundColor DarkGray
+ Write-Host '  -----------------------------------------------------------------' -ForegroundColor DarkGray
 }
 function Show-Line([string]$Label,[string]$Value,[bool]$Good=$true){
  $color=if($Good){'Green'}else{'Yellow'}
@@ -124,9 +130,14 @@ try{
     $exists=Test-Path -LiteralPath $file
     Show-Line (Split-Path $file -Leaf) $(if($exists){'FOUND'}else{'NOT FOUND'}) $exists
    }
-   Step 3 3 'Checking VirtualBox'
+   Step 3 3 'Checking VirtualBox and lab readiness'
    if(Test-Path $VBox){$vb=(& $VBox --version);Show-Line 'VirtualBox version' $vb}else{Show-Line 'VirtualBox' 'NOT INSTALLED' $false}
    if(-not $p.MeetsVMRequirements){Write-Warning 'VM minimum requirements not met.'}
+   $vmState=Read-Json $VMManifest
+   $mediaState=Read-Json $MediaManifest
+   Show-Line 'VM scaffold' $(if($vmState -and $vmState.stage -eq 'vm-scaffold-ready'){'READY'}else{'NOT READY'}) [bool]($vmState -and $vmState.stage -eq 'vm-scaffold-ready')
+   Show-Line 'Debian media' $(if($mediaState -and $mediaState.status -eq 'iso-attached-not-installed'){'ATTACHED'}else{'NOT RECORDED'}) [bool]($mediaState -and $mediaState.status -eq 'iso-attached-not-installed')
+   Show-Line 'Guest OS' 'NOT VERIFIED / INSTALL PENDING' $false
    Write-Host 'Diagnostics complete; no changes made.' -ForegroundColor Green
   }
   'Status' {
