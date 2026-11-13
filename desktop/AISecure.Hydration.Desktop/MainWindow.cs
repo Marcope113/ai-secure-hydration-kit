@@ -791,18 +791,9 @@ public sealed class MainWindow : Window
             }
             else
             {
-                // Only the Academy-built vulnerable target is acceptable here.
-                var json = await http.GetStringAsync(
-                    "https://api.github.com/repos/Marcope113/ai-secure-hydration-kit/releases/latest");
-                using var doc = JsonDocument.Parse(json);
-                var assets = doc.RootElement.GetProperty("assets").EnumerateArray();
-                var asset = assets.FirstOrDefault(a => a.GetProperty("name").GetString() is string n &&
-                    n.Contains("debian", StringComparison.OrdinalIgnoreCase) &&
-                    (n.EndsWith(".ova", StringComparison.OrdinalIgnoreCase) ||
-                     n.EndsWith(".7z", StringComparison.OrdinalIgnoreCase)));
-                if (asset.ValueKind == JsonValueKind.Undefined)
-                    throw new InvalidOperationException("Academy Debian VM is not published yet. Download unavailable.");
-                source = new Uri(asset.GetProperty("browser_download_url").GetString()!);
+                // Temporary bootstrap image: official stock Debian netinst ISO,
+                // NOT the future Academy vulnerable VM. Installation remains gated.
+                source = new Uri("https://cdimage.debian.org/cdimage/archive/13.7.0/amd64/iso-cd/debian-13.7.0-amd64-netinst.iso");
             }
             var filename = Uri.UnescapeDataString(source.Segments.Last());
             if (filename.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -830,7 +821,7 @@ public sealed class MainWindow : Window
             }
             // A complete transfer is not the same as cryptographic validation.
             File.Move(temporary, destination, true);
-            Status("Downloaded - checksum verification pending", 100);
+            Status(kali ? "Downloaded - checksum verification pending" : "Debian ISO downloaded - checksum verification pending", 100);
         }
         catch (Exception ex)
         {
@@ -872,7 +863,7 @@ public sealed class MainWindow : Window
     {
         var stack = Stack(3);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        var getDebian = Button("Get Debian VM", () => _ = DownloadLabImageAsync("debian"));
+        var getDebian = Button("Get Debian ISO", () => _ = DownloadLabImageAsync("debian"));
         getDebian.IsEnabled = hypervisorReady && !_downloadingDebian;
         actions.Children.Add(getDebian);
         actions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
