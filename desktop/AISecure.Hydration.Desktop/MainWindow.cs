@@ -894,7 +894,7 @@ public sealed class MainWindow : Window
             var listingError = await listingErrorTask;
             if (archiveListing.ExitCode != 0)
                 throw new InvalidOperationException("Cannot inspect Kali archive: " + listingError);
-            var members = listingOutput.Split(new[] { '\\r', '\\n' },
+            var members = listingOutput.Split(new[] { '\r', '\n' },
                 StringSplitOptions.RemoveEmptyEntries)
                 .Where(p => !p.EndsWith("/") && !p.EndsWith("\\\\"))
                 .ToArray();
