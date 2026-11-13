@@ -22,7 +22,8 @@ public sealed class MainWindow : Window
     private bool _installingVirtualBox;
     private bool _removingVirtualBox;
     private DispatcherTimer? _circuitTimer;
-    private DispatcherTimer? _hostCircuitTimer;
+    private readonly List<(Border segment, bool green)> _pulseSegments = new();
+    private bool _pulseBright;
     private readonly string _isoRoot = ResolveIsoDirectory();
     private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
     private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
@@ -250,10 +251,23 @@ public sealed class MainWindow : Window
     private static string State(bool ok) => ok ? "SUPPORTED" : "NOT SUPPORTED";
     private string Existing(string name) => File.Exists(Path.Combine(_root, name)) ? "Found" : "Not found";
 
+    private void RegisterPulse(Border segment, bool green = false)
+    {
+        _pulseSegments.Add((segment, green));
+        segment.Background = Paint(green ? Green : "#3B6476");
+    }
+
+    private void UpdateCircuitPulse()
+    {
+        _pulseBright = !_pulseBright;
+        foreach (var (segment, green) in _pulseSegments)
+            segment.Background = Paint(green
+                ? (_pulseBright ? "#85EAB6" : Green)
+                : (_pulseBright ? "#53DCE8" : "#3B6476"));
+    }
+
     private Control CircuitConnector(bool hostReady)
     {
-        // Pulse the next prerequisite even when VirtualBox is absent.
-        // Green indicates verified readiness; cyan pulse indicates the next setup step.
         var connector = Stack(0);
         connector.HorizontalAlignment = HorizontalAlignment.Stretch;
         var stem = new Border {
@@ -266,19 +280,8 @@ public sealed class MainWindow : Window
         };
         connector.Children.Add(stem);
         connector.Children.Add(node);
-        var phase = false;
-        void Update()
-        {
-            var color = hostReady ? (phase ? "#85EAB6" : Green)
-                : (phase ? "#53DCE8" : "#3B6476");
-            stem.Background = Paint(color);
-            node.Background = Paint(color);
-        }
-        Update();
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
-        timer.Tick += (_, _) => { phase = !phase; Update(); };
-        _hostCircuitTimer = timer;
-        timer.Start();
+        RegisterPulse(stem, hostReady);
+        RegisterPulse(node, hostReady);
         return connector;
     }
 
@@ -286,7 +289,7 @@ public sealed class MainWindow : Window
     {
         // Responsive fork: endpoints follow the centers of the three columns.
         var fork = new Canvas { Height = 25, HorizontalAlignment = HorizontalAlignment.Stretch };
-        var lines = new List<Border>();
+
         Border Segment(double width, double height)
         {
             var segment = new Border {
@@ -294,7 +297,7 @@ public sealed class MainWindow : Window
                 CornerRadius = new CornerRadius(1)
             };
             fork.Children.Add(segment);
-            lines.Add(segment);
+            RegisterPulse(segment);
             return segment;
         }
         var left = Segment(4, 12);
@@ -318,14 +321,8 @@ public sealed class MainWindow : Window
             bus.Width = x3 - x1 + 4;
             Canvas.SetLeft(trunk, x2 - 2); Canvas.SetTop(trunk, 14);
         };
-        var phase = 0;
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
-        timer.Tick += (_, _) =>
-        {
-            phase = 1 - phase;
-            var color = phase == 0 ? "#53DCE8" : "#3B6476";
-            foreach (var line in lines) line.Background = Paint(color);
-        };
+        timer.Tick += (_, _) => UpdateCircuitPulse();
         _circuitTimer = timer;
         timer.Start();
         return fork;
@@ -370,8 +367,8 @@ public sealed class MainWindow : Window
     {
         _circuitTimer?.Stop();
         _circuitTimer = null;
-        _hostCircuitTimer?.Stop();
-        _hostCircuitTimer = null;
+        _pulseSegments.Clear();
+        _pulseBright = false;
         // Progress is model state; controls belong to one page instance only.
         // Never reparent an existing TextBlock or ProgressBar during Refresh.
         _attackerProgressText = Txt("Waiting to install", 11, Muted);
@@ -421,8 +418,10 @@ public sealed class MainWindow : Window
         }
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
         var attackerControls = Stack(2);
-        attackerControls.Children.Add(Button("Get Kali VirtualBox Image", OpenAttackerIsoPage));
-        attackerControls.Children.Add(PendingInstall("Install Attacker"));
+        var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+        attackerActions.Children.Add(Button("Get Kali Image", OpenAttackerIsoPage));
+        attackerActions.Children.Add(PendingInstall("Install Attacker  →"));
+        attackerControls.Children.Add(attackerActions);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
@@ -488,6 +487,7 @@ public sealed class MainWindow : Window
         };
         Grid.SetRow(networkStem, 2);
         networkColumn.Children.Add(networkStem);
+        RegisterPulse(networkStem);
         Grid.SetColumn(networkColumn, 1);
         network.Children.Add(networkColumn);
         var targetActions = Stack(2);
@@ -705,18 +705,26 @@ public sealed class MainWindow : Window
 
     private Control TargetControls()
     {
-        var stack = Stack(8);
-        stack.Children.Add(Button("Get Academy Debian VM", OpenAcademyDebianReleases));
-        stack.Children.Add(PendingInstall("Install Target"));
+        var stack = Stack(3);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+        actions.Children.Add(Button("Get Debian VM", OpenAcademyDebianReleases));
+        actions.Children.Add(PendingInstall("Install Target  →"));
+        stack.Children.Add(actions);
         return stack;
     }
 
     private static Button PendingInstall(string title) =>
         new() {
-            Content = title + " (pending validation)",
+            Content = title,
             IsEnabled = false,
             HorizontalAlignment = HorizontalAlignment.Left,
-            Padding = new Thickness(12, 8)
+            Padding = new Thickness(12, 8),
+            CornerRadius = new CornerRadius(9),
+            Background = Paint("#142B42"),
+            BorderBrush = Paint("#53DCE8"),
+            BorderThickness = new Thickness(1.5),
+            Foreground = Paint(Muted),
+            HorizontalContentAlignment = HorizontalAlignment.Center
         };
 
     private Border Requirement(string title, string detail, string status, string statusColor, string manual, string? installLabel)
