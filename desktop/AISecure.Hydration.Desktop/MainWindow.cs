@@ -143,7 +143,7 @@ public sealed class MainWindow : Window
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
-        link.Children.Add(PendingInstall("Configure Network"));
+        link.Children.Add(PendingInstall("Configure"));
         var linkTile = new Border {
             Background = Paint("#122432"), CornerRadius = new CornerRadius(10),
             Padding = new Thickness(9, 14), VerticalAlignment = VerticalAlignment.Center,
