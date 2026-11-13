@@ -600,7 +600,7 @@ public sealed class MainWindow : Window
         // A single continuous bus behind the milestones, centered on each circle.
         var bus = new Border {
             Height = 2, Background = Paint("#4DA5B5"),
-            Margin = new Thickness(30, 0, 30, 0),
+            Margin = new Thickness(0, 0, 30, 0),
             VerticalAlignment = VerticalAlignment.Center
         };
         Grid.SetRow(bus, 0);
@@ -633,7 +633,7 @@ public sealed class MainWindow : Window
             pipeline.Children.Add(caption);
             return circle;
         }
-        var downloadStage = Stage(0, "Download", _kaliVerified, localKaliArchiveExists || _kaliVerified,
+        var downloadStage = Stage(0, "Download", localKaliArchiveExists, localKaliArchiveExists,
             OpenIsoFolder, "Open downloaded Kali image folder");
         var extractedStage = Stage(2, "Extracted",
             _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder),
@@ -647,7 +647,7 @@ public sealed class MainWindow : Window
         if (_kaliConfigured && !_kaliRunning)
         {
             openStage.BorderBrush = Paint("#45C8E8");
-            openStage.Background = Paint("#1D4257");
+            openStage.Background = Paint("#45C8E8");
         }
         deployArea.Children.Add(pipeline);
         // These legacy controls are not used by the new milestone visualization.
@@ -919,7 +919,10 @@ public sealed class MainWindow : Window
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
             if (_openKaliStage is not null && _kaliConfigured && !_kaliRunning)
+            {
                 _openKaliStage.BorderBrush = Paint(circuitOverlay.Bright ? "#79E7FF" : "#287A98");
+                _openKaliStage.Background = Paint(circuitOverlay.Bright ? "#45C8E8" : "#1E86AD");
+            }
             // Configured Kali stays solid green; only pending connections pulse.
             if (_kaliConfigured)
             {
@@ -1096,7 +1099,7 @@ public sealed class MainWindow : Window
                 if (_openKaliStage is not null)
                 {
                     _openKaliStage.BorderBrush = Paint(running ? Green : _kaliConfigured ? "#45C8E8" : "#668196");
-                    _openKaliStage.Background = Paint(running ? Green : "#263D50");
+                    _openKaliStage.Background = Paint(running ? Green : _kaliConfigured ? "#45C8E8" : "#263D50");
                     if (_openKaliStageMark is not null) {
                         _openKaliStageMark.Text = running ? "✓" : "";
                         _openKaliStageMark.Foreground = Paint(running ? "#102A25" : Muted);
