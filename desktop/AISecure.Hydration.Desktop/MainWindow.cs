@@ -645,11 +645,11 @@ public sealed class MainWindow : Window
         }
         deployArea.Children.Add(pipeline);
         var deployLayout = new Grid();
-        var deployLine = new DeployConnector { StartButton = deployButton, FinalStage = openStage,
+        var deployLine = new DeployConnector { StartButton = deployButton, FinalStage = openStage, MilestonePanel = pipeline,
             IsHitTestVisible = false };
         deployLayout.Children.Add(deployLine);
         deployLayout.Children.Add(deployArea);
-        deployLayout.LayoutUpdated += (_, _) => deployLine.InvalidateVisual();
+        deployLayout.LayoutUpdated += (_, _) => { deployLine.AlignMilestones(); deployLine.InvalidateVisual(); };
         // These legacy controls are not used by the new milestone visualization.
         _kaliDownloadButton = null;
         _extractedKaliButton = null;
@@ -1970,11 +1970,11 @@ public sealed class MainWindow : Window
         Stage(4, "Open Debian", false, false, () => {}, "Available after Debian installation");
         actions.Children.Add(pipeline);
         var layout = new Grid();
-        var connector = new DeployConnector { StartButton = deploy, FinalStage = lastStage,
+        var connector = new DeployConnector { StartButton = deploy, FinalStage = lastStage, MilestonePanel = pipeline,
             IsHitTestVisible = false };
         layout.Children.Add(connector);
         layout.Children.Add(actions);
-        layout.LayoutUpdated += (_, _) => connector.InvalidateVisual();
+        layout.LayoutUpdated += (_, _) => { connector.AlignMilestones(); connector.InvalidateVisual(); };
         _debianDownloadButton = null;
         return layout;
     }
