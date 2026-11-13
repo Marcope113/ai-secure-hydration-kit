@@ -11,7 +11,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$Version='0.3.5-preview'
+$Version='0.3.6-preview'
 $Root=Join-Path $env:LOCALAPPDATA 'AISecureAcademy'
 $Manifest=Join-Path $Root 'hydration-state.json'
 $VMManifest=Join-Path $Root 'hydration-v02.json'
@@ -25,11 +25,9 @@ function Show-Banner {
  if($Action -eq 'Version'){return}
  $now=Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
  Write-Host ''
- Write-Host '  // AI SECURE' -ForegroundColor Cyan
- Write-Host '     A C A D E M Y' -ForegroundColor DarkCyan
+ Write-Host '  // AI SECURE  A C A D E M Y' -ForegroundColor Cyan
  Write-Host ''
- Write-Host '  HYDRATION KIT' -ForegroundColor Magenta
- Write-Host '  CYBER LAB PROVISIONING' -ForegroundColor Gray
+ Write-Host '  HYDRATION KIT: Linux PrivEsc Techniques' -ForegroundColor Magenta
  Write-Host '  -------------------------------------------------------------' -ForegroundColor DarkGray
  Show-Line 'LAB' 'Linux Privilege Escalation'
  Show-Line 'LAB ID' 'linux-privesc'
