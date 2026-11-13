@@ -779,6 +779,105 @@ public sealed class MainWindow : Window
         _page.Children.Add(footer);
     }
 
+    private async Task InstallAttackerAsync()
+    {
+        if (_installingAttacker || !_kaliVerified || _verifiedKaliPath is null ||
+            !File.Exists(_verifiedKaliPath)) return;
+        var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Oracle", "VirtualBox", "VBoxManage.exe");
+        if (!File.Exists(vbox))
+        {
+            _kaliStatus = "VirtualBox is not installed";
+            _attackerProgressText.Text = _kaliStatus;
+            return;
+        }
+        var confirmation = new Window {
+            Title = "Register Kali VM", Width = 520, Height = 220,
+            Background = Paint("#152332"), WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        var confirmationBody = Stack(12);
+        confirmationBody.Margin = new Thickness(20);
+        confirmationBody.Children.Add(Txt("Extract the verified Kali image and register it in VirtualBox?", 16, Text));
+        confirmationBody.Children.Add(Txt("This will create VM files and register a machine. It will not start the guest or modify other VMs.", 12, Muted));
+        var confirmationButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        confirmationButtons.Children.Add(Button("Cancel", () => confirmation.Close(false)));
+        confirmationButtons.Children.Add(Button("Register Kali", () => confirmation.Close(true)));
+        confirmationBody.Children.Add(confirmationButtons);
+        confirmation.Content = confirmationBody;
+        if (!await confirmation.ShowDialog<bool>(this)) return;
+
+        _installingAttacker = true;
+        if (_installAttackerButton is not null) _installAttackerButton.IsEnabled = false;
+        try
+        {
+            var workspace = Path.Combine(_root, "virtual-machines", "kali");
+            Directory.CreateDirectory(workspace);
+            _attackerProgressText.Text = "Extracting verified Kali image...";
+            var extraction = new ProcessStartInfo("tar.exe") {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardError = true, RedirectStandardOutput = true
+            };
+            extraction.ArgumentList.Add("-xf");
+            extraction.ArgumentList.Add(_verifiedKaliPath);
+            extraction.ArgumentList.Add("-C");
+            extraction.ArgumentList.Add(workspace);
+            using (var process = Process.Start(extraction) ?? throw new InvalidOperationException("Cannot start tar.exe"))
+            {
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                var stderr = process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+                var error = await stderr;
+                await stdout;
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException("Extraction failed. Windows tar may not support 7z: " + error);
+            }
+            var configs = Directory.GetFiles(workspace, "*.vbox", SearchOption.AllDirectories);
+            if (configs.Length != 1)
+                throw new InvalidOperationException($"Expected one Kali .vbox file; found {configs.Length}. No VM registered.");
+            _attackerProgressText.Text = "Registering Kali in VirtualBox...";
+            async Task<string> VBox(params string[] args)
+            {
+                var start = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardError = true, RedirectStandardOutput = true
+                };
+                foreach (var arg in args) start.ArgumentList.Add(arg);
+                using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start VBoxManage");
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                var stderr = process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+                var output = await stdout;
+                var error = await stderr;
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException("VBoxManage failed: " + error);
+                return output;
+            }
+            var config = configs[0];
+            var existing = await VBox("list", "vms");
+            if (!existing.Contains(config, StringComparison.OrdinalIgnoreCase))
+                await VBox("registervm", config);
+            // Resolve the registered machine by its actual .vbox path.
+            var info = await VBox("list", "vms", "--long");
+            var name = Path.GetFileNameWithoutExtension(config);
+            // The packaged VM name normally matches its .vbox basename.
+            await VBox("modifyvm", name, "--memory",
+                (Math.Clamp(ReadVmResource("attacker", "memory", 2), 1, 8) * 1024).ToString(),
+                "--cpus", Math.Clamp(ReadVmResource("attacker", "processors", 2), 1, 4).ToString(),
+                "--nic1", "intnet", "--intnet1", "aisecurelab");
+            _attackerProgressText.Text = "Kali registered - start and verify guest before Ready";
+            _attackerProgress.Value = 100;
+        }
+        catch (Exception ex)
+        {
+            _attackerProgressText.Text = "Kali setup failed: " + ex.Message;
+        }
+        finally
+        {
+            _installingAttacker = false;
+            if (_installAttackerButton is not null) _installAttackerButton.IsEnabled = true;
+        }
+    }
+
     private async Task DownloadLabImageAsync(string kind)
     {
         var kali = kind == "kali";
