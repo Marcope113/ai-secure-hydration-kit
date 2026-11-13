@@ -19,7 +19,7 @@ public sealed class MainWindow : Window
     private readonly Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
     private string _selected = "kali";
     private readonly TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
-    private readonly TextBlock _attackerVersion = Txt("OS VERSION   Kali Linux (not verified)", 13, Muted);
+
 
     public MainWindow()
     {
@@ -39,7 +39,7 @@ public sealed class MainWindow : Window
     {
         _selected = _distro.SelectedIndex == 1 ? "parrot" : "kali";
         _attackerOs.Text = _selected == "parrot" ? "Parrot Security OS" : "Kali Linux";
-        _attackerVersion.Text = "OS VERSION   " + (_selected == "parrot" ? "Parrot Security OS" : "Kali Linux") + " (not verified)";
+
     }
 
     private static IBrush Paint(string hex) => new SolidColorBrush(Color.Parse(hex));
@@ -65,11 +65,11 @@ public sealed class MainWindow : Window
     }
     private void Section(string title) => _page.Children.Add(Txt(title, 16, Accent, FontWeight.Bold));
 
-    private Border Machine(string symbol, string role, string name, string state, string color, string details, Control? action = null)
+    private Border Machine(string symbol, string role, string name, string state, string color, string details, Control? action = null, Control? titleOverride = null)
     {
         var body = Stack(9);
         body.Children.Add(Txt(symbol + "   " + role, 15, color, FontWeight.Bold));
-        body.Children.Add(Txt(name, 22, Text, FontWeight.SemiBold));
+        body.Children.Add(titleOverride ?? Txt(name, 22, Text, FontWeight.SemiBold));
         body.Children.Add(Txt(state, 13, color, FontWeight.Bold));
         body.Children.Add(Txt(details, 13, Muted));
         if (action is not null) body.Children.Add(action);
@@ -88,11 +88,11 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB TOPOLOGY");
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
-        attackerControls.Children.Add(_attackerVersion);
+        
         attackerControls.Children.Add(_distro);
         attackerControls.Children.Add(Button("Save selection", SaveSelection));
         var attacker = Machine("[>_]", "ATTACKER", _selected == "parrot" ? "Parrot Security OS" : "Kali Linux",
-            "NOT INSTALLED", Yellow, "IP ADDRESS   Not assigned\nOS VERSION   Not detected", attackerControls);
+            "NOT INSTALLED", Yellow, "PLANNED IP   10.4.4.10\nOS VERSION   Not installed", attackerControls, _attackerOs);
         Grid.SetColumn(attacker, 0); network.Children.Add(attacker);
         var link = Stack(8);
         link.VerticalAlignment = VerticalAlignment.Center;
@@ -114,7 +114,7 @@ public sealed class MainWindow : Window
         Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
-            "IP ADDRESS   Not assigned\nOS VERSION   Not verified\nMEDIA   Debian 13.7.0 ISO");
+            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO");
         Grid.SetColumn(target, 2); network.Children.Add(target);
         _page.Children.Add(network);
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24), not yet configured or verified in either guest.", 12, Muted));
