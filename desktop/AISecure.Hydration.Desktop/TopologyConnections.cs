@@ -54,7 +54,12 @@ public sealed class TopologyConnections : Control
         context.DrawLine(cyan, new Point(x2, network.Value.Y), new Point(x2, busY));
         context.DrawLine(cyan, new Point(x3, victim.Value.Y), new Point(x3, busY));
         context.DrawLine(cyan, new Point(x1, busY), new Point(x3, busY));
-        context.DrawLine(cyan, new Point(x2, busY), hypervisorTop.Value);
+        // Route through an orthogonal elbow to avoid the slightly tilted
+        // vertical stem when the network and hypervisor centers differ.
+        var trunkX = hypervisorTop.Value.X;
+        if (Math.Abs(x2 - trunkX) > 0.5)
+            context.DrawLine(cyan, new Point(x2, busY), new Point(trunkX, busY));
+        context.DrawLine(cyan, new Point(trunkX, busY), hypervisorTop.Value);
 
         // The lower link is part of the same overlay, so it cannot drift on resize.
         context.DrawLine(green, hypervisorBottom.Value, hostTop.Value);
