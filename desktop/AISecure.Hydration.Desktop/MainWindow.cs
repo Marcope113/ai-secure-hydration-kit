@@ -416,7 +416,7 @@ public sealed class MainWindow : Window
             frame.Children.Add(labels);
             return frame;
         }
-        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
+        var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6, MinWidth = 1120 };
         var attackerControls = Stack(2);
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         attackerActions.Children.Add(Button("Get Kali Image", OpenAttackerIsoPage));
@@ -434,7 +434,8 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
-        attackerBody.Children.Add(Txt("PLANNED IP   10.4.4.10\nOS VERSION   Not installed", 14, Muted));
+        attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Not installed", 14, Muted));
+        attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
         Grid.SetColumn(attackerBody, 0); attackerLayout.Children.Add(attackerBody);
@@ -495,10 +496,11 @@ public sealed class MainWindow : Window
         Grid.SetColumn(networkColumn, 1);
         network.Children.Add(networkColumn);
         var targetActions = Stack(2);
+        targetActions.Margin = new Thickness(0, 10, 0, 0);
         targetActions.Children.Add(TargetControls());
         var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
-            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)",
+            "IP ADDRESS   10.4.4.20 (not configured)\nOS VERSION   Debian 13 (not installed)",
             targetActions);
         target.Padding = new Thickness(0);
         var targetLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -595,10 +597,15 @@ public sealed class MainWindow : Window
         layers.Children.Add(CircuitConnector(hypervisorReady && archOk && diskOk && ramOk && logicalProcessors >= 4));
         layers.Children.Add(WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system"));
         topology.Children.Add(layers);
-        _page.Children.Add(new Border {
+        var architecturePanel = new Border {
             Background = Paint("#0F2030"), CornerRadius = new CornerRadius(16),
             BorderBrush = Paint("#294153"), BorderThickness = new Thickness(1),
             Padding = new Thickness(11), Child = topology
+        };
+        _page.Children.Add(new ScrollViewer {
+            Content = architecturePanel,
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
         });
 
         var isoLocation = Stack(7);
