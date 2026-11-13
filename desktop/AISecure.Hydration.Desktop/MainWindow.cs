@@ -22,6 +22,7 @@ public sealed class MainWindow : Window
     private bool _installingVirtualBox;
     private bool _removingVirtualBox;
     private DispatcherTimer? _circuitTimer;
+    private DispatcherTimer? _hostCircuitTimer;
     private readonly string _isoRoot = ResolveIsoDirectory();
     private TextBlock _attackerProgressText = Txt("Waiting to install", 11, Muted);
     private TextBlock _targetProgressText = Txt("Waiting to install", 11, Muted);
@@ -249,21 +250,35 @@ public sealed class MainWindow : Window
     private static string State(bool ok) => ok ? "SUPPORTED" : "NOT SUPPORTED";
     private string Existing(string name) => File.Exists(Path.Combine(_root, name)) ? "Found" : "Not found";
 
-    private static Control CircuitConnector(bool active)
+    private Control CircuitConnector(bool hostReady)
     {
-        var color = active ? Green : "#4E687C";
+        // Pulse the next prerequisite even when VirtualBox is absent.
+        // Green indicates verified readiness; cyan pulse indicates the next setup step.
         var connector = Stack(0);
         connector.HorizontalAlignment = HorizontalAlignment.Stretch;
-        connector.Children.Add(new Border {
-            Width = 3, Height = 18, Background = Paint(color),
-            HorizontalAlignment = HorizontalAlignment.Center
-        });
-        connector.Children.Add(new Border {
+        var stem = new Border {
+            Width = 4, Height = 18, HorizontalAlignment = HorizontalAlignment.Center
+        };
+        var node = new Border {
             Width = 9, Height = 9, CornerRadius = new CornerRadius(5),
-            Background = Paint(color), BorderBrush = Paint("#0F2030"),
-            BorderThickness = new Thickness(1),
+            BorderBrush = Paint("#0F2030"), BorderThickness = new Thickness(1),
             HorizontalAlignment = HorizontalAlignment.Center
-        });
+        };
+        connector.Children.Add(stem);
+        connector.Children.Add(node);
+        var phase = false;
+        void Update()
+        {
+            var color = hostReady ? (phase ? "#85EAB6" : Green)
+                : (phase ? "#53DCE8" : "#3B6476");
+            stem.Background = Paint(color);
+            node.Background = Paint(color);
+        }
+        Update();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
+        timer.Tick += (_, _) => { phase = !phase; Update(); };
+        _hostCircuitTimer = timer;
+        timer.Start();
         return connector;
     }
 
@@ -355,6 +370,8 @@ public sealed class MainWindow : Window
     {
         _circuitTimer?.Stop();
         _circuitTimer = null;
+        _hostCircuitTimer?.Stop();
+        _hostCircuitTimer = null;
         // Progress is model state; controls belong to one page instance only.
         // Never reparent an existing TextBlock or ProgressBar during Refresh.
         _attackerProgressText = Txt("Waiting to install", 11, Muted);
