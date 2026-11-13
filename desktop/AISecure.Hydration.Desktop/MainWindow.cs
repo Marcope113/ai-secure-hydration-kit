@@ -95,6 +95,7 @@ public sealed class MainWindow : Window
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
         attackerControls.Children.Add(Button("Save selection", SaveSelection));
+        attackerControls.Children.Add(PendingInstall("Install Attacker"));
         var attackerBody = Stack(10);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
@@ -121,6 +122,7 @@ public sealed class MainWindow : Window
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
+        link.Children.Add(PendingInstall("Configure Network"));
         var linkTile = new Border {
             Background = Paint("#122432"), CornerRadius = new CornerRadius(10),
             Padding = new Thickness(9, 14), VerticalAlignment = VerticalAlignment.Center,
@@ -129,10 +131,10 @@ public sealed class MainWindow : Window
         Grid.SetColumn(linkTile, 1); network.Children.Add(linkTile);
         var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
             Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED", Purple,
-            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO");
+            "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)\nMEDIA   Debian 13.7.0 ISO", PendingInstall("Install Target"));
         Grid.SetColumn(target, 2); network.Children.Add(target);
         _page.Children.Add(network);
-        _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24), not yet configured or verified in either guest.", 12, Muted));
+        _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
         Section("TECHNIQUES COVERED");
         var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
@@ -163,7 +165,6 @@ public sealed class MainWindow : Window
         var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
         var free = drive.AvailableFreeSpace / 1073741824d;
         var diskOk = free >= 35;
-        var memoryGb = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1073741824d;
         // TotalAvailableMemoryBytes is a process limit, not physical RAM. Do not report it as host memory.
         var vboxPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Oracle", "VirtualBox", "VBoxManage.exe");
         var vboxOk = File.Exists(vboxPath);
@@ -183,11 +184,6 @@ public sealed class MainWindow : Window
             "  |  Physical RAM: verification pending  |  Virtualization: verification pending", 12, Muted));
         _page.Children.Add(req);
 
-        Section("LAB INSTALLATION");
-        var setup = Stack(8);
-        setup.Children.Add(Txt("Target: Debian media prepared, guest installation not verified. Attacker: distribution selection only.", 13, Muted));
-        setup.Children.Add(Txt("Installation controls will be enabled after provisioning operations and rollback behavior pass integration tests.", 12, Yellow));
-        _page.Children.Add(Tile(setup));
         _page.Children.Add(Button("Refresh diagnostics", ShowSetup));
         _page.Children.Add(Txt("NEXT STEP", 13, Accent, FontWeight.Bold));
         _next.IsEnabled = false;
@@ -195,6 +191,14 @@ public sealed class MainWindow : Window
         Section("ACTIVITY");
         _page.Children.Add(_activity);
     }
+
+    private static Button PendingInstall(string title) =>
+        new() {
+            Content = title + " (pending validation)",
+            IsEnabled = false,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(12, 8)
+        };
 
     private Border Requirement(string title, string detail, string status, string statusColor, string manual, string? installLabel)
     {
