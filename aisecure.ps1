@@ -11,7 +11,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$Version='0.3.0-preview'
+$Version='0.3.1-preview'
 $Root=Join-Path $env:LOCALAPPDATA 'AISecureAcademy'
 $Manifest=Join-Path $Root 'hydration-state.json'
 $VMManifest=Join-Path $Root 'hydration-v02.json'
@@ -21,12 +21,41 @@ $VBox=Join-Path $env:ProgramFiles 'Oracle\VirtualBox\VBoxManage.exe'
 $IsoName='debian-13.7.0-amd64-netinst.iso'
 $IsoHash='a7ef94ac2fb9a7fec454552abd629b7cc9d5155c886165a45649f5ce6167e355'
 $IsoBase='https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/'
+function Show-Banner {
+ if($Action -eq 'Version'){return}
+ Write-Host ''
+ Write-Host '  +------------------------------------------------------------+' -ForegroundColor DarkCyan
+ Write-Host '  |                                                            |' -ForegroundColor DarkCyan
+ Write-Host '  |   A I   S E C U R E   A C A D E M Y                        |' -ForegroundColor Cyan
+ Write-Host '  |                                                            |' -ForegroundColor DarkCyan
+ Write-Host '  |   H Y D R A T I O N   K I T     // SYSTEM BOOTSTRAP         |' -ForegroundColor Magenta
+ Write-Host '  |                                                            |' -ForegroundColor DarkCyan
+ Write-Host '  +------------------------------------------------------------+' -ForegroundColor DarkCyan
+ Write-Host ("  BUILD  {0}     MODE  {1}" -f $Version,$Action.ToUpperInvariant()) -ForegroundColor DarkGray
+ Write-Host '  --------------------------------------------------------------' -ForegroundColor DarkGray
+ if(-not [Console]::IsOutputRedirected){
+  foreach($frame in @('[=       ]','[===     ]','[=====   ]','[======= ]','[========]')){
+   Write-Host (([char]13)+"  INITIALIZING  "+$frame) -NoNewline -ForegroundColor Cyan
+   Start-Sleep -Milliseconds 65
+  }
+  Write-Host ''
+ }
+ Write-Host ''
+}
 function Step([int]$Index,[int]$Total,[string]$Message){
  $percent=[int](($Index-1)*100/$Total)
  Write-Progress -Id 1 -Activity "AI Secure Hydration Kit - $Action" -Status "Step $Index/$Total : $Message" -PercentComplete $percent
- Write-Host ("[{0}/{1}] {2}" -f $Index,$Total,$Message) -ForegroundColor Cyan
+ Write-Host ("  [{0:00}/{1:00}]  >>  {2}" -f $Index,$Total,$Message) -ForegroundColor Cyan
 }
-function Complete-Steps {Write-Progress -Id 1 -Activity 'AI Secure Hydration Kit' -Completed}
+function Complete-Steps {
+ Write-Progress -Id 1 -Activity 'AI Secure Hydration Kit' -Completed
+ if($Action -ne 'Version'){
+  Write-Host ''
+  Write-Host '  --------------------------------------------------------------' -ForegroundColor DarkGray
+  Write-Host '  SESSION COMPLETE // AI SECURE ACADEMY' -ForegroundColor Green
+  Write-Host ''
+ }
+}
 function Confirm([string]$Question){return ((Read-Host "$Question (yes/no)") -eq 'yes')}
 function Save-Json([string]$Path,$Data){
  New-Item -ItemType Directory -Path (Split-Path $Path) -Force | Out-Null
@@ -68,7 +97,7 @@ function Assert-VM {
  return $s
 }
 try{
- Write-Host "AI Secure Academy | Hydration Kit $Version" -ForegroundColor Magenta
+ Show-Banner
  switch($Action){
   'Version' {Write-Output $Version}
   'Check' {
