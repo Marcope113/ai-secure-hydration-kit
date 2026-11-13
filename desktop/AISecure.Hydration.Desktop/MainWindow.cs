@@ -534,6 +534,7 @@ public sealed class MainWindow : Window
         var hypervisorReady = File.Exists(hypervisorPath);
         var foundationInfo = Stack(2);
         foundationInfo.HorizontalAlignment = HorizontalAlignment.Stretch;
+        foundationInfo.Children.Add(new IsometricLabIcon { Kind = "hypervisor", HorizontalAlignment = HorizontalAlignment.Center });
         foreach (var line in new[] {
             Txt("HYPERVISOR  /  ORACLE VIRTUALBOX", 16, Accent, FontWeight.Bold),
             Txt("Virtualization layer hosting Attacker + Victim VMs", 13, Muted),
@@ -639,14 +640,26 @@ public sealed class MainWindow : Window
         _page.Children.Add(architecturePanel);
 
         var isoLocation = Stack(7);
-        isoLocation.Children.Add(Txt("ISO STORAGE  /  HYDRATION KIT", 13, Accent, FontWeight.Bold));
+        var isoHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        isoHeader.Children.Add(new IsometricLabIcon { Kind = "folder" });
+        var isoLabel = Txt("ISO STORAGE  /  HYDRATION KIT", 13, Accent, FontWeight.Bold);
+        isoLabel.VerticalAlignment = VerticalAlignment.Center;
+        isoHeader.Children.Add(isoLabel);
+        isoLocation.Children.Add(isoHeader);
         isoLocation.Children.Add(Txt(_isoRoot, 13, Text));
         isoLocation.Children.Add(Button("Open ISO Folder", OpenIsoFolder));
         _page.Children.Add(Tile(isoLocation, "#122432"));
 
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
-        Section("TECHNIQUES COVERED");
+        var techniquesHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        var techniquesLabel = Txt("TECHNIQUES COVERED", 16, Accent, FontWeight.Bold);
+        techniquesLabel.VerticalAlignment = VerticalAlignment.Center;
+        techniquesHeader.Children.Add(techniquesLabel);
+        var refresh = Button("Refresh diagnostics", ShowSetup);
+        Grid.SetColumn(refresh, 1);
+        techniquesHeader.Children.Add(refresh);
+        _page.Children.Add(techniquesHeader);
         var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
         var items = new (string,string)[] {
             ("01  Linux Enumeration", "Users, processes and permissions"),
@@ -666,9 +679,6 @@ public sealed class MainWindow : Window
         }
         _page.Children.Add(techniques);
 
-        _page.Children.Add(Button("Refresh diagnostics", ShowSetup));
-        Section("ACTIVITY");
-        _page.Children.Add(_activity);
 
         var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*"), Margin = new Thickness(0, 20, 0, 12) };
         var nextInfo = Txt("STEP 2 OF 2  /  LEARNING PATH  -  Available after lab validation", 12, Muted);
@@ -771,7 +781,16 @@ public sealed class MainWindow : Window
 
     private Border Requirement(string title, string detail, string status, string statusColor, string manual, string? installLabel)
     {
-        var body = Stack(8);
+        var body = Stack(5);
+        var iconKind = title switch {
+            "OPERATING SYSTEM" => "windows",
+            "ARCHITECTURE" => "cpu",
+            "DISK SPACE" => "disk",
+            "PHYSICAL RAM" => "ram",
+            "LOGICAL PROCESSORS" => "cpu",
+            _ => "computer"
+        };
+        body.Children.Add(new IsometricLabIcon { Kind = iconKind, HorizontalAlignment = HorizontalAlignment.Center });
         foreach (var line in new[] {
             Txt(title, 12, Muted, FontWeight.Bold),
             Txt(detail, 18, Text, FontWeight.SemiBold),
