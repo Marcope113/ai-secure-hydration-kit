@@ -356,7 +356,7 @@ public sealed class MainWindow : Window
     {
         var body = Stack(4);
         var roleHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        roleHeader.Children.Add(new IsometricLabIcon { Kind = "server" });
+        roleHeader.Children.Add(new IsometricLabIcon { Kind = "debian-server" });
         var roleLabel = Txt(role, 15, color, FontWeight.Bold);
         roleLabel.VerticalAlignment = VerticalAlignment.Center;
         roleHeader.Children.Add(roleLabel);
@@ -449,7 +449,7 @@ public sealed class MainWindow : Window
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        attackerRole.Children.Add(new IsometricLabIcon { Kind = "computer" });
+        attackerRole.Children.Add(new IsometricLabIcon { Kind = "kali-workstation" });
         var attackerRoleLabel = Txt("ATTACKER", 15, Yellow, FontWeight.Bold);
         attackerRoleLabel.VerticalAlignment = VerticalAlignment.Center;
         attackerRole.Children.Add(attackerRoleLabel);
@@ -462,7 +462,7 @@ public sealed class MainWindow : Window
         attackerBody.Margin = new Thickness(10, 0, 0, 0);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
-        attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Not installed", 14, Muted));
+        attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Kali Linux (not installed)", 14, Muted));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -615,10 +615,6 @@ public sealed class MainWindow : Window
             "Four logical processors or more are recommended for running both VMs.", null);
         Grid.SetColumn(cpuTile, 4); hostSpecs.Children.Add(cpuTile);
         physicalHost.Children.Add(hostSpecs);
-        var pendingHostChecks = Txt("CPU virtualization: verification pending", 12, Muted);
-        pendingHostChecks.TextAlignment = TextAlignment.Center;
-        pendingHostChecks.HorizontalAlignment = HorizontalAlignment.Stretch;
-        physicalHost.Children.Add(pendingHostChecks);
         // Only confirmed host prerequisites and installed hypervisor turn this link green.
 
         var hostTile = WithLayer(Tile(physicalHost, "#1B3042"), "LAYER 01", "Physical Host  /  Hardware and operating system");
