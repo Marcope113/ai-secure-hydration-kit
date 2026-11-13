@@ -870,6 +870,59 @@ public sealed class MainWindow : Window
             var vmError = await vmErrorTask;
             if (registered.ExitCode != 0)
                 throw new InvalidOperationException("Cannot verify existing VMs: " + vmError);
+            // A registered Kali VM is already installed: configure it directly.
+            // Do not extract the multi-GB archive again on every click.
+            var registeredKali = System.Text.RegularExpressions.Regex.Matches(vmOutput,
+                    @"(?m)^Name:\\s*(kali-linux-[^\\r\\n]+)\\r?$")
+                .Cast<System.Text.RegularExpressions.Match>().ToList();
+            if (registeredKali.Count == 1)
+            {
+                var existingName = registeredKali[0].Groups[1].Value.Trim();
+                var infoStart = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                foreach (var arg in new[] { "showvminfo", existingName, "--machinereadable" })
+                    infoStart.ArgumentList.Add(arg);
+                using var infoProcess = Process.Start(infoStart)
+                    ?? throw new InvalidOperationException("Cannot inspect existing Kali VM.");
+                var infoOutputTask = infoProcess.StandardOutput.ReadToEndAsync();
+                var infoErrorTask = infoProcess.StandardError.ReadToEndAsync();
+                await infoProcess.WaitForExitAsync();
+                var infoOutput = await infoOutputTask;
+                var infoError = await infoErrorTask;
+                if (infoProcess.ExitCode != 0)
+                    throw new InvalidOperationException("Cannot inspect Kali VM: " + infoError);
+                if (!infoOutput.Contains("VMState=\\\"poweroff\\\"", StringComparison.OrdinalIgnoreCase) &&
+                    !infoOutput.Contains("VMState=\\\"aborted\\\"", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Existing Kali VM must be powered off before configuration.");
+                _attackerProgress.IsIndeterminate = false;
+                _attackerProgress.Value = 90;
+                _attackerProgressText.Text = "Existing Kali VM found - applying settings (no extraction)...";
+                var modify = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                foreach (var arg in new[] { "modifyvm", existingName,
+                    "--memory", (Math.Clamp(ReadVmResource("attacker", "memory", 2), 1, 8) * 1024).ToString(),
+                    "--cpus", Math.Clamp(ReadVmResource("attacker", "processors", 2), 1, 4).ToString(),
+                    "--nic1", "intnet", "--intnet1", "aisecurelab" })
+                    modify.ArgumentList.Add(arg);
+                using var modifying = Process.Start(modify)
+                    ?? throw new InvalidOperationException("Cannot configure Kali VM.");
+                var modifyOutputTask = modifying.StandardOutput.ReadToEndAsync();
+                var modifyErrorTask = modifying.StandardError.ReadToEndAsync();
+                await modifying.WaitForExitAsync();
+                await modifyOutputTask;
+                var modifyError = await modifyErrorTask;
+                if (modifying.ExitCode != 0)
+                    throw new InvalidOperationException("Kali configuration failed: " + modifyError);
+                _attackerProgress.Value = 100;
+                _attackerProgressText.Text = "Kali registered and configured - guest verification pending";
+                return;
+            }
+            if (registeredKali.Count > 1)
+                throw new InvalidOperationException("Multiple registered Kali VMs found. Choose one in VirtualBox before proceeding.");
             var todayPrefix = DateTime.Now.ToString("yyyyMMdd") + "-";
             foreach (var previous in Directory.GetDirectories(kaliRoot, todayPrefix + "*"))
             {
