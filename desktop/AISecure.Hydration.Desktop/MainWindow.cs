@@ -35,8 +35,8 @@ public sealed class MainWindow : Window
         Background = Paint("#0B1520");
         Content = new ScrollViewer { Content = _page };
         var saved = ReadSelection();
-        _selected = saved == "parrot" ? "parrot" : "kali";
-        _distro.SelectedIndex = _selected == "parrot" ? 1 : 0;
+        _selected = "kali";
+        _distro.SelectedIndex = 0;
         ShowSetup();
     }
 
@@ -125,17 +125,17 @@ public sealed class MainWindow : Window
         _targetProgress = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Height = 7 };
         // Create fresh controls for each page build. Avalonia controls cannot
         // be attached to multiple logical parents after a rebuild.
-        _distro = new ComboBox { ItemsSource = new[] { "Kali Linux", "Parrot Security OS" }, SelectedIndex = _selected == "parrot" ? 1 : 0, MinWidth = 210 };
-        _attackerOs = Txt(_selected == "parrot" ? "Parrot Security OS" : "Kali Linux", 22, Text, FontWeight.SemiBold);
+        _distro = new ComboBox { ItemsSource = new[] { "Kali Linux" }, SelectedIndex = 0, MinWidth = 210 };
+        _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
         _activity = Txt("Ready. No VM changes made.", 13, Muted);
         _next = new Button { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
         _next.Click += (_, _) => ShowLessons();
-        _distro.SelectionChanged += (_, _) => { UpdateAttackerSelection(); SaveSelection(); };
+
         Header("LAB SETUP  /  STEP 1 OF 2");
         var overview = Stack(8);
         overview.Children.Add(Txt("Linux PrivEsc Techniques", 28, Text, FontWeight.Bold));
         overview.Children.Add(Txt("Explore how Linux privilege boundaries fail. Enumerate misconfigurations, gain elevated access in an isolated environment, then investigate detection and remediation.", 14, Muted));
-        overview.Children.Add(Txt("One target Debian VM + your choice of Kali Linux or Parrot Security OS.", 13, Accent));
+        overview.Children.Add(Txt("Kali Linux attacker + Academy Debian vulnerable target, both on VirtualBox.", 13, Accent));
         _page.Children.Add(Tile(overview));
 
         Section("VIRTUAL LAB ARCHITECTURE");
@@ -162,7 +162,7 @@ public sealed class MainWindow : Window
         }
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("*,150,*"), ColumnSpacing = 12 };
         var attackerControls = Stack(8);
-        attackerControls.Children.Add(Button("Download " + (_selected == "parrot" ? "Parrot" : "Kali") + " ISO", OpenAttackerIsoPage));
+        attackerControls.Children.Add(Button("Get Kali VirtualBox Image", OpenAttackerIsoPage));
         attackerControls.Children.Add(PendingInstall("Install Attacker"));
         attackerControls.Children.Add(_attackerProgressText);
         attackerControls.Children.Add(_attackerProgress);
@@ -173,7 +173,7 @@ public sealed class MainWindow : Window
         attackerHeader.Children.Add(attackerRole);
         _distro.HorizontalAlignment = HorizontalAlignment.Right;
         Grid.SetColumn(_distro, 1);
-        attackerHeader.Children.Add(_distro);
+        // Fixed attacker distribution: no selection required.
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Children.Add(_attackerOs);
         attackerBody.Children.Add(Txt("NOT INSTALLED", 13, Yellow, FontWeight.Bold));
@@ -333,18 +333,15 @@ public sealed class MainWindow : Window
 
     private void OpenAttackerIsoPage()
     {
-        // Official vendor download pages provide current ISO versions and checksums.
-        var url = _selected == "parrot"
-            ? "https://parrotsec.org/download/"
-            : "https://www.kali.org/get-kali/";
-        OpenDownloadPage(url, _selected == "parrot" ? "Parrot Security OS" : "Kali Linux");
+        // Official prebuilt VirtualBox image; no installer ISO needed.
+        OpenDownloadPage("https://www.kali.org/get-kali/#kali-virtual-machines", "Kali Linux VirtualBox image");
     }
 
     private void OpenAcademyDebianReleases()
     {
-        // No Academy-customized ISO release is verified yet. Do not substitute stock Debian.
+        // No Academy-customized VM image is published yet. Do not substitute stock Debian.
         OpenDownloadPage("https://github.com/Marcope113/ai-secure-hydration-kit/releases",
-            "Academy Debian ISO (release pending)");
+            "Academy Debian VM image (release pending)");
     }
 
     private void OpenDownloadPage(string url, string label)
@@ -363,7 +360,7 @@ public sealed class MainWindow : Window
     private Control TargetControls()
     {
         var stack = Stack(8);
-        stack.Children.Add(Button("Get Academy Debian ISO", OpenAcademyDebianReleases));
+        stack.Children.Add(Button("Get Academy Debian VM", OpenAcademyDebianReleases));
         stack.Children.Add(PendingInstall("Install Target"));
         stack.Children.Add(_targetProgressText);
         stack.Children.Add(_targetProgress);
