@@ -14,11 +14,11 @@ public sealed class MainWindow : Window
     private const string Green = "#67D7A2", Yellow = "#F0BF67", Red = "#FF7F8D";
     private readonly string _root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AISecureAcademy");
     private readonly StackPanel _page = new() { Spacing = 18, Margin = new Thickness(30, 26) };
-    private readonly ComboBox _distro = new() { ItemsSource = new[] { "Kali Linux", "Parrot Security OS" }, SelectedIndex = 0, MinWidth = 210 };
-    private readonly TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
-    private readonly Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
+    private ComboBox _distro = new() { ItemsSource = new[] { "Kali Linux", "Parrot Security OS" }, SelectedIndex = 0, MinWidth = 210 };
+    private TextBlock _activity = Txt("Waiting for diagnostics.", 13, Muted);
+    private Button _next = new() { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
     private string _selected = "kali";
-    private readonly TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
+    private TextBlock _attackerOs = Txt("Kali Linux", 22, Text, FontWeight.SemiBold);
 
 
     public MainWindow()
@@ -27,11 +27,9 @@ public sealed class MainWindow : Window
         Width = 1160; Height = 840; MinWidth = 800; MinHeight = 580;
         Background = Paint("#0B1520");
         Content = new ScrollViewer { Content = _page };
-        _next.Click += (_, _) => ShowLessons();
         var saved = ReadSelection();
         _selected = saved == "parrot" ? "parrot" : "kali";
         _distro.SelectedIndex = _selected == "parrot" ? 1 : 0;
-        _distro.SelectionChanged += (_, _) => UpdateAttackerSelection();
         ShowSetup();
     }
 
@@ -78,6 +76,14 @@ public sealed class MainWindow : Window
 
     private void ShowSetup()
     {
+        // Create fresh controls for each page build. Avalonia controls cannot
+        // be attached to multiple logical parents after a rebuild.
+        _distro = new ComboBox { ItemsSource = new[] { "Kali Linux", "Parrot Security OS" }, SelectedIndex = _selected == "parrot" ? 1 : 0, MinWidth = 210 };
+        _attackerOs = Txt(_selected == "parrot" ? "Parrot Security OS" : "Kali Linux", 22, Text, FontWeight.SemiBold);
+        _activity = Txt("Ready. No VM changes made.", 13, Muted);
+        _next = new Button { Content = "Next: Learning Path (verification pending)", IsEnabled = false, Padding = new Thickness(18, 12) };
+        _next.Click += (_, _) => ShowLessons();
+        _distro.SelectionChanged += (_, _) => UpdateAttackerSelection();
         Header("LAB SETUP  /  STEP 1 OF 2");
         var overview = Stack(8);
         overview.Children.Add(Txt("Linux PrivEsc Techniques", 28, Text, FontWeight.Bold));
@@ -240,7 +246,7 @@ public sealed class MainWindow : Window
             _selected = selection;
             UpdateAttackerSelection();
             _activity.Text = "Attacker selection saved. No VM changes made.";
-            ShowSetup();
+            // Update the current topology in place. Do not rebuild the page.
         }
         catch (Exception ex) { _activity.Text = "Selection error: " + ex.Message; }
     }
