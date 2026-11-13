@@ -1139,9 +1139,9 @@ public sealed class MainWindow : Window
             var macMatch = System.Text.RegularExpressions.Regex.Match(info, @"(?im)^macaddress1=""?([a-f0-9]{12})""?");
             if (!macMatch.Success) throw new InvalidOperationException("Internal adapter MAC not found.");
             var mac = string.Join(":", Enumerable.Range(0, 6).Select(i => macMatch.Groups[1].Value.Substring(i * 2, 2))).ToLowerInvariant();
-            var script = "set -eu; " +
-                "dev=$(nmcli -t -f GENERAL.DEVICE,GENERAL.HWADDR device show | awk -F: -v m='" + mac + "' 'BEGIN{IGNORECASE=1} {if(tolower($0) ~ m){print $1; exit}}'); " +
-                "if [ -z \"$dev\" ]; then dev=$(ip -o link | awk -v m='" + mac + "' 'tolower($0) ~ m {gsub(\":\",\"\",$2);print $2;exit}'); fi; " +
+            var script = "set -eu; dev=''; " +
+                "for p in /sys/class/net/*/address; do " +
+                "if [ \"$(cat \"$p\")\" = '" + mac + "' ]; then dev=$(basename \"$(dirname \"$p\")\"); break; fi; done; " +
                 "[ -n \"$dev\" ] || exit 42; " +
                 "nmcli connection show aisecurelab-kali >/dev/null 2>&1 || nmcli connection add type ethernet ifname \"$dev\" con-name aisecurelab-kali; " +
                 "nmcli connection modify aisecurelab-kali connection.interface-name \"$dev\" ipv4.method manual ipv4.addresses 10.4.4.10/24 ipv4.gateway \"\" ipv4.never-default yes ipv6.method disabled; " +
