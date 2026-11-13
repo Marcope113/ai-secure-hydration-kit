@@ -30,6 +30,10 @@ public sealed class MainWindow : Window
     private Button? _debianDownloadButton;
     private bool _installingAttacker;
     private bool _kaliConfigured;
+    private bool _kaliRunning;
+    private bool _checkingKaliRuntime;
+    private TextBlock? _kaliRuntimeLabel;
+    private int _runtimePollTicks;
     private Button? _installAttackerButton;
     private string? _verifiedKaliPath;
     private string? _installedKaliFolder;
@@ -65,7 +69,7 @@ public sealed class MainWindow : Window
         _selected = "kali";
         _distro.SelectedIndex = 0;
         ShowSetup();
-        Dispatcher.UIThread.Post(() => _ = DetectRegisteredKaliAsync());
+        Dispatcher.UIThread.Post(() => { _ = DetectRegisteredKaliAsync(); _ = RefreshKaliRuntimeAsync(); });
         // Revalidate previously downloaded images when the application starts.
         // The installer must not depend on the download having occurred in this session.
         Dispatcher.UIThread.Post(() => {
@@ -589,7 +593,10 @@ public sealed class MainWindow : Window
         attackerBody.Children.Add(attackerHeader);
         attackerBody.Margin = new Thickness(10, 0, 0, 0);
         attackerBody.Children.Add(_attackerOs);
-        attackerBody.Children.Add(Txt("● OFFLINE  /  NOT INSTALLED", 13, Yellow, FontWeight.Bold));
+        _kaliRuntimeLabel = Txt(_kaliRunning ? "● RUNNING  /  CONFIGURED" :
+            _kaliConfigured ? "● OFFLINE  /  CONFIGURED" : "● OFFLINE  /  NOT INSTALLED",
+            13, _kaliRunning ? Green : Yellow, FontWeight.Bold);
+        attackerBody.Children.Add(_kaliRuntimeLabel);
         attackerBody.Children.Add(Txt("IP ADDRESS   10.4.4.10 (not configured)\nOS VERSION   Kali Linux (not installed)\nUSER:PASS   kali:kali (default image)", 14, Muted));
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
@@ -805,6 +812,7 @@ public sealed class MainWindow : Window
         circuitLayout.LayoutUpdated += (_, _) => circuitOverlay.InvalidateVisual();
         var circuitTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
         circuitTimer.Tick += (_, _) => {
+            if (++_runtimePollTicks % 7 == 0) _ = RefreshKaliRuntimeAsync();
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
             // Configured Kali stays solid green; only pending connections pulse.
@@ -929,6 +937,43 @@ public sealed class MainWindow : Window
             _extractedKaliButton.BorderBrush = Paint(Green);
             ToolTip.SetTip(_extractedKaliButton, folder);
         }
+    }
+
+    private async Task RefreshKaliRuntimeAsync()
+    {
+        if (_checkingKaliRuntime) return;
+        _checkingKaliRuntime = true;
+        try
+        {
+            var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Oracle", "VirtualBox", "VBoxManage.exe");
+            if (!File.Exists(vbox)) return;
+            var start = new ProcessStartInfo(vbox) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            start.ArgumentList.Add("list");
+            start.ArgumentList.Add("runningvms");
+            using var process = Process.Start(start);
+            if (process is null) return;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var output = await stdout;
+            await stderr;
+            if (process.ExitCode != 0) return;
+            var running = System.Text.RegularExpressions.Regex.IsMatch(output,
+                @"(?im)^""[^""]*kali-linux[^""]*""\\s+\\{[a-f0-9-]+\\}");
+            _kaliRunning = running;
+            if (_kaliRuntimeLabel is not null)
+            {
+                _kaliRuntimeLabel.Text = running ? "● RUNNING  /  CONFIGURED" :
+                    _kaliConfigured ? "● OFFLINE  /  CONFIGURED" : "● OFFLINE  /  NOT INSTALLED";
+                _kaliRuntimeLabel.Foreground = Paint(running ? Green : Yellow);
+            }
+        }
+        catch { /* Leave last known status if VirtualBox cannot be queried. */ }
+        finally { _checkingKaliRuntime = false; }
     }
 
     private async Task DetectRegisteredKaliAsync()
