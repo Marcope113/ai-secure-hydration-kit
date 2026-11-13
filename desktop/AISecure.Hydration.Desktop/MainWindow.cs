@@ -784,10 +784,11 @@ public sealed class MainWindow : Window
         circuitTimer.Tick += (_, _) => {
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
+            // Configured Kali stays solid green; only pending connections pulse.
             if (_kaliConfigured)
             {
-                attacker.BorderBrush = Paint(circuitOverlay.Bright ? "#8BF6BE" : "#398B6A");
-                installAttacker.BorderBrush = Paint(circuitOverlay.Bright ? "#8BF6BE" : "#398B6A");
+                attacker.BorderBrush = Paint(Green);
+                installAttacker.BorderBrush = Paint(Green);
             }
             if (installHypervisorPulse is not null)
                 installHypervisorPulse.BorderBrush = Paint(circuitOverlay.Bright ? "#85EAF1" : "#397389");
