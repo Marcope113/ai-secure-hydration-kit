@@ -31,6 +31,8 @@ public sealed class MainWindow : Window
     private bool _installingAttacker;
     private Button? _installAttackerButton;
     private string? _verifiedKaliPath;
+    private string? _installedKaliFolder;
+    private Button? _extractedKaliButton;
     private bool _kaliVerified;
     private bool _debianVerified;
     private string? _debianSha256;
@@ -478,6 +480,15 @@ public sealed class MainWindow : Window
         _kaliDownloadButton = getKali;
         attackerActions.Children.Add(getKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
+        var extractedKali = Button("Extracted", () => {
+            if (_installedKaliFolder is not null && Directory.Exists(_installedKaliFolder))
+                Process.Start(new ProcessStartInfo(_installedKaliFolder) { UseShellExecute = true });
+        });
+        extractedKali.IsEnabled = _installedKaliFolder is not null && Directory.Exists(_installedKaliFolder);
+        extractedKali.BorderBrush = Paint(extractedKali.IsEnabled ? Green : "#355368");
+        _extractedKaliButton = extractedKali;
+        attackerActions.Children.Add(extractedKali);
+        attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         var installAttacker = Button(_installingAttacker ? "Installing..." : "Install Attacker",
             () => _ = InstallAttackerAsync());
         installAttacker.IsEnabled = hypervisorReady && _kaliVerified && !_installingAttacker;
@@ -812,6 +823,18 @@ public sealed class MainWindow : Window
         _page.Children.Add(footer);
     }
 
+    private void MarkKaliExtracted(string folder)
+    {
+        if (!Directory.Exists(folder)) return;
+        _installedKaliFolder = folder;
+        if (_extractedKaliButton is not null)
+        {
+            _extractedKaliButton.IsEnabled = true;
+            _extractedKaliButton.BorderBrush = Paint(Green);
+            ToolTip.SetTip(_extractedKaliButton, folder);
+        }
+    }
+
     private async Task InstallAttackerAsync()
     {
         if (_installingAttacker || !_kaliVerified || _verifiedKaliPath is null ||
@@ -917,6 +940,10 @@ public sealed class MainWindow : Window
                 var modifyError = await modifyErrorTask;
                 if (modifying.ExitCode != 0)
                     throw new InvalidOperationException("Kali configuration failed: " + modifyError);
+                var cfgMatch = System.Text.RegularExpressions.Regex.Match(infoOutput,
+                    @"(?m)^CfgFile=\"([^\"]+)\""); 
+                if (cfgMatch.Success)
+                    MarkKaliExtracted(Path.GetDirectoryName(cfgMatch.Groups[1].Value)!);
                 _attackerProgress.Value = 100;
                 _attackerProgressText.Text = "Kali registered and configured - guest verification pending";
                 return;
@@ -1056,6 +1083,11 @@ public sealed class MainWindow : Window
                 (Math.Clamp(ReadVmResource("attacker", "memory", 2), 1, 8) * 1024).ToString(),
                 "--cpus", Math.Clamp(ReadVmResource("attacker", "processors", 2), 1, 4).ToString(),
                 "--nic1", "intnet", "--intnet1", "aisecurelab");
+            var registeredInfo = await VBox("showvminfo", vmId, "--machinereadable");
+            var cfgMatchFinal = System.Text.RegularExpressions.Regex.Match(registeredInfo,
+                @"(?m)^CfgFile=\"([^\"]+)\"");
+            if (cfgMatchFinal.Success)
+                MarkKaliExtracted(Path.GetDirectoryName(cfgMatchFinal.Groups[1].Value)!);
             _attackerProgressText.Text = "Kali registered and configured - guest verification pending";
             _attackerProgress.Value = 100;
         }
