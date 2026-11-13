@@ -481,8 +481,8 @@ public sealed class MainWindow : Window
         _installAttackerButton = installAttacker;
         attackerActions.Children.Add(installAttacker);
         attackerControls.Children.Add(attackerActions);
-        _kaliHashLabel = Txt(_kaliSha256 is null ? "" : "SHA-256: " + _kaliSha256, 10, Muted);
-        _kaliHashLabel.TextWrapping = TextWrapping.WrapAnywhere;
+        _kaliHashLabel = Txt(_kaliSha256 is null ? "" : "SHA-256: " + _kaliSha256[..32] + "\\n" + _kaliSha256[32..], 10, Muted);
+        _kaliHashLabel.TextWrapping = TextWrapping.Wrap;
         if (_kaliSha256 is not null) ToolTip.SetTip(_kaliHashLabel, _kaliSha256);
         attackerControls.Children.Add(_kaliHashLabel);
         var attackerBody = Stack(3);
@@ -857,9 +857,9 @@ public sealed class MainWindow : Window
             if (!existing.Contains(config, StringComparison.OrdinalIgnoreCase))
                 await VBox("registervm", config);
             // Resolve the registered machine by its actual .vbox path.
-            var info = await VBox("list", "vms", "--long");
-            var name = Path.GetFileNameWithoutExtension(config);
-            // The packaged VM name normally matches its .vbox basename.
+            var vmDocument = System.Xml.Linq.XDocument.Load(config);
+            var name = vmDocument.Descendants().FirstOrDefault(e => e.Name.LocalName == "Machine")?.Attribute("name")?.Value
+                ?? throw new InvalidOperationException("Cannot determine Kali VM name from .vbox configuration.");
             await VBox("modifyvm", name, "--memory",
                 (Math.Clamp(ReadVmResource("attacker", "memory", 2), 1, 8) * 1024).ToString(),
                 "--cpus", Math.Clamp(ReadVmResource("attacker", "processors", 2), 1, 4).ToString(),
@@ -941,7 +941,7 @@ public sealed class MainWindow : Window
                     _kaliSha256 = actual;
                     if (_kaliHashLabel is not null)
                     {
-                        _kaliHashLabel.Text = "SHA-256 verified: " + actual;
+                        _kaliHashLabel.Text = "SHA-256 verified: " + actual[..32] + "\\n" + actual[32..];
                         ToolTip.SetTip(_kaliHashLabel, actual);
                     }
                 }
