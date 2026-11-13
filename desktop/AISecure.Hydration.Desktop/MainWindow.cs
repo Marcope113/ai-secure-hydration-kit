@@ -478,19 +478,10 @@ public sealed class MainWindow : Window
         var networkState = Txt("● OFFLINE", 11, Yellow, FontWeight.Bold);
         networkState.TextAlignment = TextAlignment.Center;
         link.Children.Add(networkState);
-        link.Children.Add(new Button {
-            Content = "Configure",
-            IsEnabled = false,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            Padding = new Thickness(14, 8),
-            CornerRadius = new CornerRadius(9),
-            Background = Paint("#142B42"),
-            Foreground = Paint(Muted),
-            BorderBrush = Paint(Accent),
-            BorderThickness = new Thickness(1.5),
-            FontWeight = FontWeight.SemiBold
-        });
+        var configureNetwork = Button("Configure", () =>
+            _activity.Text = "Network configuration is not implemented yet. No changes made.");
+        configureNetwork.HorizontalAlignment = HorizontalAlignment.Center;
+        link.Children.Add(configureNetwork);
         var linkTile = new Border {
             Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
             Padding = new Thickness(9, 9), VerticalAlignment = VerticalAlignment.Center,
@@ -570,18 +561,23 @@ public sealed class MainWindow : Window
         var free = drive.AvailableFreeSpace / 1073741824d;
         var diskOk = free >= 35;
         var physicalHost = Stack(2);
-        var hostTitle = Txt("HOST MACHINE  /  " +
-            (windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription), 15, Accent, FontWeight.Bold);
+        var hostTitle = Txt("HOST MACHINE", 15, Accent, FontWeight.Bold);
         hostTitle.TextAlignment = TextAlignment.Center;
         hostTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
         physicalHost.Children.Add(hostTitle);
-        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*"), ColumnSpacing = 12 };
+        var hostSpecs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*"), ColumnSpacing = 10 };
         var architectureTile = Requirement("ARCHITECTURE", architecture.ToString(), State(archOk), archOk ? Green : Red,
             "Windows 11 x64 is required for this Windows preview.", null);
         var diskTile = Requirement("DISK SPACE", $"{free:F1} GB free", diskOk ? "SUPPORTED" : "NOT ENOUGH SPACE", diskOk ? Green : Red,
             "Minimum 35 GB free for the initial target VM. More space is recommended for two VMs.", null);
-        Grid.SetColumn(architectureTile, 0); hostSpecs.Children.Add(architectureTile);
-        Grid.SetColumn(diskTile, 1); hostSpecs.Children.Add(diskTile);
+        var osName = windows && build >= 22000 ? "Windows 11" : RuntimeInformation.OSDescription;
+        var osTile = Requirement("OPERATING SYSTEM", osName,
+            windows && build >= 22000 ? "SUPPORTED" : "NOT SUPPORTED",
+            windows && build >= 22000 ? Green : Red,
+            "Windows 11 is required for this Windows desktop preview.", null);
+        Grid.SetColumn(osTile, 0); hostSpecs.Children.Add(osTile);
+        Grid.SetColumn(architectureTile, 1); hostSpecs.Children.Add(architectureTile);
+        Grid.SetColumn(diskTile, 2); hostSpecs.Children.Add(diskTile);
         var physicalRam = GetPhysicalRamGiB();
         var ramOk = physicalRam is >= 8;
         var ramTile = Requirement("PHYSICAL RAM",
@@ -589,13 +585,13 @@ public sealed class MainWindow : Window
             physicalRam is null ? "CHECK UNAVAILABLE" : ramOk ? "SUPPORTED" : "8 GB RECOMMENDED",
             physicalRam is null ? Yellow : ramOk ? Green : Yellow,
             "8 GB or more is recommended for running Kali and Debian together.", null);
-        Grid.SetColumn(ramTile, 2); hostSpecs.Children.Add(ramTile);
+        Grid.SetColumn(ramTile, 3); hostSpecs.Children.Add(ramTile);
         var logicalProcessors = Environment.ProcessorCount;
         var cpuTile = Requirement("LOGICAL PROCESSORS", logicalProcessors.ToString(),
             logicalProcessors >= 4 ? "SUPPORTED" : "4 RECOMMENDED",
             logicalProcessors >= 4 ? Green : Yellow,
             "Four logical processors or more are recommended for running both VMs.", null);
-        Grid.SetColumn(cpuTile, 3); hostSpecs.Children.Add(cpuTile);
+        Grid.SetColumn(cpuTile, 4); hostSpecs.Children.Add(cpuTile);
         physicalHost.Children.Add(hostSpecs);
         var pendingHostChecks = Txt("CPU virtualization: verification pending", 12, Muted);
         pendingHostChecks.TextAlignment = TextAlignment.Center;
