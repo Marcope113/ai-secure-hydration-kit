@@ -46,6 +46,11 @@ public sealed class MainWindow : Window
     private Button? _extractedKaliButton;
     private bool _kaliVerified;
     private bool _debianVerified;
+    private Border? _dhcpOuterTile;
+    private Border? _networkOuterTile;
+    private TextBlock? _networkStatusLabel;
+    private bool _deployingDebian;
+    private Button? _deployDebianButton;
     private string? _debianSha256;
     private string? _kaliSha256;
     private TextBlock? _kaliHashLabel;
@@ -728,7 +733,9 @@ public sealed class MainWindow : Window
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
-        var networkState = Txt("● OFFLINE", 11, Yellow, FontWeight.Bold);
+        var networkState = Txt(_kaliIpVerified && _dhcpConfigured ? "● DHCP LEASE VERIFIED" : "● OFFLINE", 11,
+            _kaliIpVerified && _dhcpConfigured ? Green : Yellow, FontWeight.Bold);
+        _networkStatusLabel = networkState;
         networkState.TextAlignment = TextAlignment.Center;
         link.Children.Add(networkState);
         var configureNetwork = Button("Configure", () =>
@@ -738,10 +745,11 @@ public sealed class MainWindow : Window
         link.Children.Add(configureNetwork);
         var linkTile = new Border {
             Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
-            BorderBrush = Paint(Yellow), BorderThickness = new Thickness(2),
+            BorderBrush = Paint(_kaliIpVerified && _dhcpConfigured ? Green : Yellow), BorderThickness = new Thickness(2),
             Padding = new Thickness(9, 9), VerticalAlignment = VerticalAlignment.Center,
             Child = link
         };
+        _networkOuterTile = linkTile;
         // Network stays a normal interactive card; the overlay owns every circuit line.
         var networkColumn = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), RowSpacing = 8 };
         var dhcpPanel = Stack(4);
@@ -763,6 +771,7 @@ public sealed class MainWindow : Window
         dhcpTile.Padding = new Thickness(10, 9);
         dhcpTile.BorderBrush = Paint(_dhcpConfigured ? Green : Yellow);
         dhcpTile.BorderThickness = new Thickness(2);
+        _dhcpOuterTile = dhcpTile;
         networkColumn.Children.Add(dhcpTile);
         Grid.SetRow(linkTile, 1);
         networkColumn.Children.Add(linkTile);
@@ -1221,6 +1230,7 @@ public sealed class MainWindow : Window
                 throw new InvalidOperationException("DHCP server was not found after configuration.");
             _dhcpConfigured = true;
             if (_dhcpStateLabel is not null) { _dhcpStateLabel.Text = "● ENABLED"; _dhcpStateLabel.Foreground = Paint(Green); }
+            if (_dhcpOuterTile is not null) _dhcpOuterTile.BorderBrush = Paint(Green);
             _activity.Text = "Internal DHCP configured for aisecurelab (10.4.4.100–101). Guest IP lease not yet verified.";
         }
         catch (Exception ex)
@@ -1347,7 +1357,12 @@ public sealed class MainWindow : Window
                         {
                             _kaliDhcpAddress = ip;
                             _kaliIpVerified = true;
-                            _attackerProgressText.Text = "VirtualBox DHCP lease: " + ip;
+                            if (_networkOuterTile is not null && _dhcpConfigured) _networkOuterTile.BorderBrush = Paint(Green);
+                            if (_networkStatusLabel is not null && _dhcpConfigured) {
+                                _networkStatusLabel.Text = "● DHCP LEASE VERIFIED";
+                                _networkStatusLabel.Foreground = Paint(Green);
+                            }
+                            _attackerProgressText = "VirtualBox DHCP lease: " + ip;
                             ShowSetup();
                         }
                         return;
@@ -1916,17 +1931,82 @@ public sealed class MainWindow : Window
 
     private Control TargetControls(bool hypervisorReady)
     {
-        var stack = Stack(3);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        var getDebian = Button("Get Debian ISO", () => { if (_debianVerified) OpenIsoFolder(); else _ = DownloadLabImageAsync("debian"); });
-        getDebian.IsEnabled = hypervisorReady && !_downloadingDebian;
-        if (_debianVerified) { getDebian.Content = "Debian downloaded"; getDebian.BorderBrush = Paint(Green); }
-        _debianDownloadButton = getDebian;
-        actions.Children.Add(getDebian);
-        actions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
-        actions.Children.Add(PendingInstall("Install Target"));
-        stack.Children.Add(actions);
-        return stack;
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
+        var deploy = Button(_deployingDebian ? "Downloading..." : "Deploy Debian",
+            () => _ = DeployDebianAsync());
+        deploy.IsEnabled = hypervisorReady && !_deployingDebian;
+        _deployDebianButton = deploy;
+        actions.Children.Add(deploy);
+        actions.Children.Add(new Border {
+            Width = 15, Height = 2, Background = Paint("#4DA5B5"),
+            VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 19, 0, 0)
+        });
+        var pipeline = new Grid {
+            ColumnDefinitions = new ColumnDefinitions("61,18,61,18,61"),
+            RowDefinitions = new RowDefinitions("32,Auto"), RowSpacing = 3
+        };
+        var bus = new Border { Height = 2, Background = Paint("#4DA5B5"),
+            Margin = new Thickness(0, 0, 30, 0), VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumnSpan(bus, 5);
+        pipeline.Children.Add(bus);
+        void Stage(int col, string name, bool completed, bool enabled, Action click, string hint)
+        {
+            var mark = Txt(completed ? "✓" : "", 13, "#102A25", FontWeight.Bold);
+            mark.HorizontalAlignment = HorizontalAlignment.Center;
+            mark.VerticalAlignment = VerticalAlignment.Center;
+            var circle = new Border {
+                Width = 25, Height = 25, CornerRadius = new CornerRadius(13),
+                BorderThickness = new Thickness(2),
+                BorderBrush = Paint(completed ? Green : "#668196"),
+                Background = Paint(completed ? Green : "#263D50"),
+                Child = mark, HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            if (enabled) {
+                circle.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
+                circle.PointerPressed += (_, _) => click();
+            }
+            ToolTip.SetTip(circle, hint);
+            Grid.SetColumn(circle, col);
+            pipeline.Children.Add(circle);
+            var caption = Txt(name, 10, completed ? Green : Muted, FontWeight.SemiBold);
+            caption.TextAlignment = TextAlignment.Center;
+            Grid.SetColumn(caption, col);
+            Grid.SetRow(caption, 1);
+            pipeline.Children.Add(caption);
+        }
+        var isoExists = Directory.Exists(_isoRoot) &&
+            Directory.GetFiles(_isoRoot, "debian-*-amd64-netinst.iso").Length > 0;
+        Stage(0, "Download", _debianVerified, isoExists, OpenIsoFolder, "Open Debian ISO folder");
+        Stage(2, "Install", false, false, () => {}, "Automated Debian installation not yet implemented");
+        Stage(4, "Open Debian", false, false, () => {}, "Available after Debian installation");
+        actions.Children.Add(pipeline);
+        _debianDownloadButton = null;
+        return actions;
+    }
+
+    private async Task DeployDebianAsync()
+    {
+        if (_deployingDebian) return;
+        _deployingDebian = true;
+        if (_deployDebianButton is not null) {
+            _deployDebianButton.IsEnabled = false;
+            _deployDebianButton.Content = "Downloading...";
+        }
+        try
+        {
+            if (!_debianVerified) await DownloadLabImageAsync("debian");
+            if (_debianVerified)
+                _targetProgressText.Text = "Debian ISO verified. Automatic VM installation is not yet implemented.";
+        }
+        finally
+        {
+            _deployingDebian = false;
+            if (_deployDebianButton is not null) {
+                _deployDebianButton.IsEnabled = true;
+                _deployDebianButton.Content = "Deploy Debian";
+            }
+        }
     }
 
     private static Button PendingInstall(string title) =>
