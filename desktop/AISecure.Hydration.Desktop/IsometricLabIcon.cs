@@ -89,6 +89,28 @@ public sealed class IsometricLabIcon : Control
             Shape("M 3,12 L 16,8 L 21,12 L 35,8 L 35,26 L 3,30 Z", "#2D94B2");
             Shape("M 3,16 L 35,12 L 35,28 L 3,32 Z", "#155171");
         }
+        else if (Kind == "kali-workstation")
+        {
+            // Workstation monitor and keyboard with cyan terminal details.
+            Shape("M 3,8 L 25,3 L 36,9 L 14,15 Z", "#5DBDD3");
+            Shape("M 3,8 L 14,15 L 14,28 L 3,21 Z", "#234E72");
+            Shape("M 14,15 L 36,9 L 36,23 L 14,28 Z", "#16354F");
+            Shape("M 17,17 L 33,13 L 33,22 L 17,26 Z", "#081B2A");
+            context.DrawLine(new Pen(Brush("#86F4CE"), 1.8), new Point(19,20), new Point(23,21));
+            context.DrawLine(new Pen(Brush("#86F4CE"), 1.4), new Point(25,22), new Point(30,21));
+            Shape("M 11,30 L 24,27 L 35,30 L 21,33 Z", "#4D91A7");
+        }
+        else if (Kind == "debian-server")
+        {
+            // Server tower with a clearly different purple front panel.
+            Shape("M 5,7 L 19,2 L 34,9 L 20,14 Z", "#A8A1D7");
+            Shape("M 5,7 L 20,14 L 20,32 L 5,25 Z", "#514E8E");
+            Shape("M 20,14 L 34,9 L 34,27 L 20,32 Z", "#272D58");
+            context.DrawLine(new Pen(Brush("#E0C5FF"), 1.7), new Point(22,19), new Point(31,16));
+            context.DrawLine(new Pen(Brush("#E0C5FF"), 1.7), new Point(22,24), new Point(31,21));
+            context.DrawEllipse(Brush("#83E8BA"), null, new Point(10,15), 1.8, 1.8);
+            context.DrawEllipse(Brush("#83E8BA"), null, new Point(10,21), 1.8, 1.8);
+        }
         else if (Kind == "server")
         {
             // A compact isometric server cabinet.
