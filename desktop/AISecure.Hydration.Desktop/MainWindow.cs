@@ -609,12 +609,6 @@ public sealed class MainWindow : Window
         _installAttackerButton = installAttacker;
         attackerActions.Children.Add(installAttacker);
         attackerControls.Children.Add(attackerActions);
-        if (_kaliConfigured && !_kaliIpVerified)
-        {
-            var configureIp = Button("Configure Kali IP", () => _ = ConfigureKaliIpAsync());
-            configureIp.IsEnabled = _kaliRunning && !_configuringKaliIp;
-            attackerControls.Children.Add(configureIp);
-        }
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
@@ -700,7 +694,27 @@ public sealed class MainWindow : Window
             Child = link
         };
         // Network stays a normal interactive card; the overlay owns every circuit line.
-        var networkColumn = new Grid { RowDefinitions = new RowDefinitions("*,Auto,*") };
+        var networkColumn = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), RowSpacing = 8 };
+        var dhcpPanel = Stack(4);
+        dhcpPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var dhcpHeading = Txt("DHCP SERVER", 12, Accent, FontWeight.Bold);
+        dhcpHeading.TextAlignment = TextAlignment.Center;
+        dhcpPanel.Children.Add(dhcpHeading);
+        _dhcpStateLabel = Txt(_dhcpConfigured ? "● ENABLED" : "● NOT CONFIGURED", 11,
+            _dhcpConfigured ? Green : Yellow, FontWeight.Bold);
+        _dhcpStateLabel.TextAlignment = TextAlignment.Center;
+        dhcpPanel.Children.Add(_dhcpStateLabel);
+        dhcpPanel.Children.Add(Txt("10.4.4.100–200  /  255.255.255.0", 10, Muted));
+        var dhcpAction = Button(_dhcpConfigured ? "DHCP Enabled" : "Enable DHCP", () => _ = ConfigureDhcpAsync());
+        dhcpAction.IsEnabled = hypervisorReady && !_configuringDhcp && !_dhcpConfigured;
+        dhcpAction.HorizontalAlignment = HorizontalAlignment.Center;
+        _dhcpButton = dhcpAction;
+        dhcpPanel.Children.Add(dhcpAction);
+        var dhcpTile = Tile(dhcpPanel, "#20384A");
+        dhcpTile.Padding = new Thickness(10, 9);
+        dhcpTile.BorderBrush = Paint(_dhcpConfigured ? Green : Yellow);
+        dhcpTile.BorderThickness = new Thickness(2);
+        networkColumn.Children.Add(dhcpTile);
         Grid.SetRow(linkTile, 1);
         networkColumn.Children.Add(linkTile);
         Grid.SetColumn(networkColumn, 1);
@@ -1096,8 +1110,68 @@ public sealed class MainWindow : Window
         catch { /* Diagnostics are best-effort; keep manual install available. */ }
     }
 
+    private bool _dhcpConfigured;
+    private bool _configuringDhcp;
+    private Button? _dhcpButton;
+    private TextBlock? _dhcpStateLabel;
     private bool _kaliIpVerified;
     private bool _configuringKaliIp;
+    private async Task ConfigureDhcpAsync()
+    {
+        if (_configuringDhcp) return;
+        _configuringDhcp = true;
+        if (_dhcpButton is not null) _dhcpButton.IsEnabled = false;
+        try
+        {
+            var vbox = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Oracle", "VirtualBox", "VBoxManage.exe");
+            if (!File.Exists(vbox)) throw new InvalidOperationException("VirtualBox not found.");
+            async Task<string> Run(params string[] args)
+            {
+                var psi = new ProcessStartInfo(vbox) {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                foreach (var arg in args) psi.ArgumentList.Add(arg);
+                using var process = Process.Start(psi) ?? throw new InvalidOperationException("Cannot launch VBoxManage.");
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                var stderr = process.StandardError.ReadToEndAsync();
+                using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(20));
+                try { await process.WaitForExitAsync(timeout.Token); }
+                catch (OperationCanceledException) { try { process.Kill(true); } catch {} throw new TimeoutException("VBoxManage DHCP command timed out."); }
+                var result = await stdout;
+                var error = await stderr;
+                if (process.ExitCode != 0) throw new InvalidOperationException(error.Length > 0 ? error : result);
+                return result;
+            }
+            var current = await Run("list", "dhcpservers");
+            // VirtualBox DHCP on internal network does not imply fixed .10/.20 reservations.
+            if (!current.Contains("aisecurelab", StringComparison.OrdinalIgnoreCase))
+                await Run("dhcpserver", "add", "--network", "aisecurelab",
+                    "--server-ip", "10.4.4.1", "--netmask", "255.255.255.0",
+                    "--lower-ip", "10.4.4.100", "--upper-ip", "10.4.4.200", "--enable");
+            else
+                await Run("dhcpserver", "modify", "--network", "aisecurelab", "--enable");
+            var verified = await Run("list", "dhcpservers");
+            if (!verified.Contains("aisecurelab", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("DHCP server was not found after configuration.");
+            _dhcpConfigured = true;
+            if (_dhcpStateLabel is not null) { _dhcpStateLabel.Text = "● ENABLED"; _dhcpStateLabel.Foreground = Paint(Green); }
+            if (_dhcpButton is not null) { _dhcpButton.Content = "DHCP Enabled"; _dhcpButton.BorderBrush = Paint(Green); }
+            _activity.Text = "Internal DHCP configured for aisecurelab (10.4.4.100–200). Guest IP lease not yet verified.";
+        }
+        catch (Exception ex)
+        {
+            _activity.Text = "DHCP configuration failed: " + ex.Message;
+            if (_dhcpStateLabel is not null) _dhcpStateLabel.Text = "● CONFIGURATION FAILED";
+        }
+        finally
+        {
+            _configuringDhcp = false;
+            if (_dhcpButton is not null) _dhcpButton.IsEnabled = !_dhcpConfigured;
+        }
+    }
+
     private async Task ConfigureKaliIpAsync()
     {
         if (_configuringKaliIp || !_kaliRunning) {
