@@ -963,7 +963,7 @@ public sealed class MainWindow : Window
             await stderr;
             if (process.ExitCode != 0) return;
             var running = System.Text.RegularExpressions.Regex.IsMatch(output,
-                @"(?im)^""[^""]*kali-linux[^""]*""\\s+\\{[a-f0-9-]+\\}");
+                @"(?im)^""[^""]*kali-linux[^""]*""\s+\{[a-f0-9-]+\}");
             _kaliRunning = running;
             if (_kaliRuntimeLabel is not null)
             {
