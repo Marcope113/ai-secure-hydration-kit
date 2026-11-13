@@ -112,7 +112,7 @@ public sealed class MainWindow : Window
             if (!File.Exists(file)) return fallback;
             using var doc = JsonDocument.Parse(File.ReadAllText(file));
             return doc.RootElement.TryGetProperty(role, out var ram)
-                && ram.TryGetInt32(out var value) && value is 1024 or 2048 or 4096 or 8192
+                && ram.TryGetInt32(out var value) && value >= 1024 && value <= 65536 && value % 1024 == 0
                 ? value : fallback;
         }
         catch { return fallback; }
@@ -134,19 +134,36 @@ public sealed class MainWindow : Window
 
     private Control VmRamPicker(string role, int fallback)
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        var panel = Stack(5);
+        var hostGb = GetPhysicalRamGiB();
+        // Leave at least 4 GB for Windows; never offer more than 64 GB per VM.
+        var maxGb = hostGb is null ? 16 : Math.Clamp((int)Math.Floor(hostGb.Value) - 4, 2, 64);
+        var initialGb = Math.Clamp(ReadVmRam(role, fallback) / 1024, 1, maxGb);
+        var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         var label = Txt("PLANNED RAM", 12, Muted, FontWeight.SemiBold);
-        label.VerticalAlignment = VerticalAlignment.Center;
-        row.Children.Add(label);
-        var options = new[] { "1 GB", "2 GB", "4 GB", "8 GB" };
-        var selected = ReadVmRam(role, fallback);
-        var picker = new ComboBox { ItemsSource = options, SelectedIndex = Array.IndexOf(new[] { 1024, 2048, 4096, 8192 }, selected), MinWidth = 100 };
-        picker.SelectionChanged += (_, _) =>
-        {
-            if (picker.SelectedIndex >= 0) SaveVmRam(role, new[] { 1024, 2048, 4096, 8192 }[picker.SelectedIndex]);
+        var value = Txt($"{initialGb} GB", 13, Accent, FontWeight.Bold);
+        Grid.SetColumn(value, 1);
+        heading.Children.Add(label);
+        heading.Children.Add(value);
+        panel.Children.Add(heading);
+        var slider = new Slider {
+            Minimum = 1, Maximum = maxGb, TickFrequency = 1,
+            IsSnapToTickEnabled = true, Value = initialGb,
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
-        row.Children.Add(picker);
-        return row;
+        slider.PropertyChanged += (_, args) =>
+        {
+            if (args.Property == Slider.ValueProperty)
+            {
+                var gb = (int)Math.Round(slider.Value);
+                value.Text = $"{gb} GB";
+                SaveVmRam(role, gb * 1024);
+            }
+        };
+        panel.Children.Add(slider);
+        var range = Txt($"1 GB  —  {maxGb} GB maximum (1 GB increments)", 11, Muted);
+        panel.Children.Add(range);
+        return panel;
     }
 
     private static string ResolveIsoDirectory()
