@@ -395,7 +395,7 @@ public sealed class MainWindow : Window
         Section("VIRTUAL LAB ARCHITECTURE");
         var topology = Stack(2);
         topology.Children.Add(Txt("Isolated Linux privilege escalation environment", 13, Muted));
-        var layers = Stack(2);
+        var layers = Stack(0);
         Control WithLayer(Control content, string layer, string description)
         {
             var frame = new Grid();
@@ -420,11 +420,12 @@ public sealed class MainWindow : Window
         var attackerControls = Stack(2);
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         attackerActions.Children.Add(Button("Get Kali Image", OpenAttackerIsoPage));
-        attackerActions.Children.Add(PendingInstall("Install Attacker  →"));
+        attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
+        attackerActions.Children.Add(PendingInstall("Install Attacker"));
         attackerControls.Children.Add(attackerActions);
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        var attackerRole = Txt("[>_]   ATTACKER", 15, Yellow, FontWeight.Bold);
+        var attackerRole = Txt("▣   ATTACKER", 15, Yellow, FontWeight.Bold);
         Grid.SetColumn(attackerRole, 0);
         attackerHeader.Children.Add(attackerRole);
         _distro.HorizontalAlignment = HorizontalAlignment.Right;
@@ -457,8 +458,11 @@ public sealed class MainWindow : Window
         networkName.TextAlignment = TextAlignment.Center;
         var networkType = Txt("INTERNAL NETWORK", 10, Muted);
         networkType.TextAlignment = TextAlignment.Center;
-        var networkArrow = Txt("<------>", 20, Accent, FontWeight.Bold);
+        var networkArrow = Txt("←────→", 16, Accent, FontWeight.Bold);
         networkArrow.TextAlignment = TextAlignment.Center;
+        var networkIcon = Txt("◎", 23, Accent, FontWeight.Bold);
+        networkIcon.TextAlignment = TextAlignment.Center;
+        link.Children.Add(networkIcon);
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
@@ -492,7 +496,7 @@ public sealed class MainWindow : Window
         network.Children.Add(networkColumn);
         var targetActions = Stack(2);
         targetActions.Children.Add(TargetControls());
-        var target = Machine("[#]", "VICTIM / TARGET", "Debian 13",
+        var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
             "PLANNED IP   10.4.4.20\nOS VERSION   Debian 13 (not installed)",
             targetActions);
@@ -708,7 +712,8 @@ public sealed class MainWindow : Window
         var stack = Stack(3);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
         actions.Children.Add(Button("Get Debian VM", OpenAcademyDebianReleases));
-        actions.Children.Add(PendingInstall("Install Target  →"));
+        actions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
+        actions.Children.Add(PendingInstall("Install Target"));
         stack.Children.Add(actions);
         return stack;
     }
