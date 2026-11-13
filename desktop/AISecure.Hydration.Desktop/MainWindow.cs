@@ -391,13 +391,19 @@ public sealed class MainWindow : Window
         Header("LAB SETUP  /  STEP 1 OF 2");
         var overview = Stack(2);
         var overviewHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
-        var tux = Txt("🐧", 36, Text);
+        var tux = new IsometricLabIcon { Kind = "tux", Width = 43, Height = 40 };
         tux.VerticalAlignment = VerticalAlignment.Center;
         overviewHeader.Children.Add(tux);
         var overviewHeading = Txt("Linux PrivEsc Techniques", 23, Text, FontWeight.Bold);
         overviewHeading.VerticalAlignment = VerticalAlignment.Center;
         overviewHeader.Children.Add(overviewHeading);
-        overview.Children.Add(overviewHeader);
+        var overviewTop = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+        overviewTop.Children.Add(overviewHeader);
+        var refreshDiagnostics = Button("Refresh diagnostics", ShowSetup);
+        refreshDiagnostics.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(refreshDiagnostics, 1);
+        overviewTop.Children.Add(refreshDiagnostics);
+        overview.Children.Add(overviewTop);
         overview.Children.Add(Txt("Explore how Linux privilege boundaries fail. Enumerate misconfigurations, gain elevated access in an isolated environment, then investigate detection and remediation.", 14, Muted));
         overview.Children.Add(Txt("Kali Linux attacker + Academy Debian vulnerable target, both on VirtualBox.", 13, Accent));
         var overviewTile = Tile(overview);
@@ -428,10 +434,15 @@ public sealed class MainWindow : Window
             frame.Children.Add(labels);
             return frame;
         }
+        var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Oracle", "VirtualBox", "VBoxManage.exe");
+        var hypervisorReady = File.Exists(hypervisorPath);
         var network = new Grid { ColumnDefinitions = new ColumnDefinitions("36*,28*,36*"), ColumnSpacing = 6 };
         var attackerControls = Stack(2);
         var attackerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        attackerActions.Children.Add(Button("Get Kali Image", OpenAttackerIsoPage));
+        var getKali = Button("Get Kali Image", OpenAttackerIsoPage);
+        getKali.IsEnabled = hypervisorReady;
+        attackerActions.Children.Add(getKali);
         attackerActions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         attackerActions.Children.Add(PendingInstall("Install Attacker"));
         attackerControls.Children.Add(attackerActions);
@@ -488,6 +499,7 @@ public sealed class MainWindow : Window
         link.Children.Add(networkState);
         var configureNetwork = Button("Configure", () =>
             _activity.Text = "Network configuration is not implemented yet. No changes made.");
+        configureNetwork.IsEnabled = hypervisorReady;
         configureNetwork.HorizontalAlignment = HorizontalAlignment.Center;
         link.Children.Add(configureNetwork);
         var linkTile = new Border {
@@ -503,7 +515,7 @@ public sealed class MainWindow : Window
         network.Children.Add(networkColumn);
         var targetActions = Stack(2);
         targetActions.Margin = new Thickness(0, 10, 0, 0);
-        targetActions.Children.Add(TargetControls());
+        targetActions.Children.Add(TargetControls(hypervisorReady));
         var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE  /  " + (Existing("debian-media.json") == "Found" ? "ISO ATTACHED" : "NOT PREPARED"), Purple,
             "IP ADDRESS   10.4.4.20 (not configured)\nOS VERSION   Debian 13 (not installed)",
@@ -529,9 +541,7 @@ public sealed class MainWindow : Window
 
 
         // The hypervisor is the foundation beneath both guest machines.
-        var hypervisorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            "Oracle", "VirtualBox", "VBoxManage.exe");
-        var hypervisorReady = File.Exists(hypervisorPath);
+
         var foundationInfo = Stack(2);
         foundationInfo.HorizontalAlignment = HorizontalAlignment.Stretch;
         foundationInfo.Children.Add(new IsometricLabIcon { Kind = "hypervisor", HorizontalAlignment = HorizontalAlignment.Center });
@@ -546,15 +556,18 @@ public sealed class MainWindow : Window
             line.HorizontalAlignment = HorizontalAlignment.Stretch;
             foundationInfo.Children.Add(line);
         }
+        Button? installHypervisorPulse = null;
         if (hypervisorReady)
         {
             var uninstallHypervisor = Button("Uninstall VirtualBox", () => _ = UninstallVirtualBoxAsync());
+            uninstallHypervisor.BorderBrush = Paint(Green);
             uninstallHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(uninstallHypervisor);
         }
         else
         {
             var installHypervisor = Button("Install VirtualBox", () => _ = InstallVirtualBoxAsync());
+            installHypervisorPulse = installHypervisor;
             installHypervisor.HorizontalAlignment = HorizontalAlignment.Center;
             foundationInfo.Children.Add(installHypervisor);
         }
@@ -628,6 +641,8 @@ public sealed class MainWindow : Window
         circuitTimer.Tick += (_, _) => {
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
+            if (installHypervisorPulse is not null)
+                installHypervisorPulse.BorderBrush = Paint(circuitOverlay.Bright ? "#85EAF1" : "#397389");
         };
         _circuitTimer = circuitTimer;
         circuitTimer.Start();
@@ -652,14 +667,7 @@ public sealed class MainWindow : Window
 
         _page.Children.Add(Txt("IPs are planned static addresses (10.4.4.0/24). ACTIVE will require both guests to be verified, their interfaces configured and bidirectional connectivity tested.", 12, Muted));
 
-        var techniquesHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-        var techniquesLabel = Txt("TECHNIQUES COVERED", 16, Accent, FontWeight.Bold);
-        techniquesLabel.VerticalAlignment = VerticalAlignment.Center;
-        techniquesHeader.Children.Add(techniquesLabel);
-        var refresh = Button("Refresh diagnostics", ShowSetup);
-        Grid.SetColumn(refresh, 1);
-        techniquesHeader.Children.Add(refresh);
-        _page.Children.Add(techniquesHeader);
+        Section("TECHNIQUES COVERED");
         var techniques = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 10, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 10 };
         var items = new (string,string)[] {
             ("01  Linux Enumeration", "Users, processes and permissions"),
@@ -754,11 +762,13 @@ public sealed class MainWindow : Window
         }
     }
 
-    private Control TargetControls()
+    private Control TargetControls(bool hypervisorReady)
     {
         var stack = Stack(3);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
-        actions.Children.Add(Button("Get Debian VM", OpenAcademyDebianReleases));
+        var getDebian = Button("Get Debian VM", OpenAcademyDebianReleases);
+        getDebian.IsEnabled = hypervisorReady;
+        actions.Children.Add(getDebian);
         actions.Children.Add(Txt("→", 19, Accent, FontWeight.Bold));
         actions.Children.Add(PendingInstall("Install Target"));
         stack.Children.Add(actions);
