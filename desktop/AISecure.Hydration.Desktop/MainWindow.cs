@@ -64,6 +64,13 @@ public sealed class MainWindow : Window
         _selected = "kali";
         _distro.SelectedIndex = 0;
         ShowSetup();
+        // Revalidate previously downloaded images when the application starts.
+        // The installer must not depend on the download having occurred in this session.
+        Dispatcher.UIThread.Post(() => {
+            if (Directory.Exists(_isoRoot) &&
+                Directory.GetFiles(_isoRoot, "kali-linux-*-virtualbox-amd64.7z").Length > 0)
+                _ = DownloadLabImageAsync("kali");
+        });
     }
 
     private void UpdateAttackerSelection()
@@ -775,14 +782,19 @@ public sealed class MainWindow : Window
         storageTree.Children.Add(Txt("STORAGE LOCATIONS", 11, Accent, FontWeight.Bold));
         void AddStoragePath(string prefix, string label, string path)
         {
-            var entry = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
-            var display = Txt(prefix + " " + label + "   " + path, 12, Muted);
-            display.VerticalAlignment = VerticalAlignment.Center;
-            entry.Children.Add(display);
-            var open = Button("Open", () => OpenStoragePath(path));
-            open.Padding = new Thickness(10, 4);
-            Grid.SetColumn(open, 1);
-            entry.Children.Add(open);
+            var entry = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            var name = Txt(prefix + " " + label, 12, Muted);
+            name.VerticalAlignment = VerticalAlignment.Center;
+            entry.Children.Add(name);
+            var link = Txt(path, 12, Accent);
+            link.VerticalAlignment = VerticalAlignment.Center;
+            link.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
+            link.TextDecorations = TextDecorations.Underline;
+            ToolTip.SetTip(link, "Open folder: " + path);
+            link.PointerEntered += (_, _) => link.Foreground = Paint("#B3F6FF");
+            link.PointerExited += (_, _) => link.Foreground = Paint(Accent);
+            link.PointerPressed += (_, _) => OpenStoragePath(path);
+            entry.Children.Add(link);
             storageTree.Children.Add(entry);
         }
         AddStoragePath("▣", "HYDRATION KIT ROOT", storageRoot);
