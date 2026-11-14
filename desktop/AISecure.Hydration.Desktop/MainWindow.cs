@@ -1080,6 +1080,12 @@ public sealed class MainWindow : Window
         _deployLabStatus = Txt(_deployingLab ? "Deployment in progress..." : "", 12, Muted);
         _deployLabStatus.HorizontalAlignment = HorizontalAlignment.Center;
         labWorkflow.Children.Add(_deployLabStatus);
+        if (!hypervisorReady)
+        {
+            var prerequisite = Txt("Requires VirtualBox to be installed first", 11, Yellow, FontWeight.SemiBold);
+            prerequisite.HorizontalAlignment = HorizontalAlignment.Center;
+            labWorkflow.Children.Add(prerequisite);
+        }
         var workflowTile = Tile(labWorkflow, "#152B3C");
         workflowTile.Padding = new Thickness(4, 8);
         workflowTile.BorderBrush = Paint("#45C8E8");
