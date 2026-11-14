@@ -1059,8 +1059,7 @@ public sealed class MainWindow : Window
         trackLayout.Children.Add(steps);
         trackLayout.LayoutUpdated += (_, _) => track.InvalidateVisual();
         labWorkflow.Children.Add(trackLayout);
-        _deployLabStatus = Txt(_deployingLab ? "Deployment in progress..." :
-            "Configure network and deploy both VMs in sequence.", 12, Muted);
+        _deployLabStatus = Txt(_deployingLab ? "Deployment in progress..." : "", 12, Muted);
         _deployLabStatus.HorizontalAlignment = HorizontalAlignment.Center;
         labWorkflow.Children.Add(_deployLabStatus);
         var workflowTile = Tile(labWorkflow, "#152B3C");
@@ -1068,6 +1067,9 @@ public sealed class MainWindow : Window
         workflowTile.BorderBrush = Paint("#45C8E8");
         workflowTile.BorderThickness = new Thickness(1.5);
         topology.Children.Add(workflowTile);
+        // Keep a clear visual gap between deployment progress and the VM/network row.
+        var deploymentGap = new Border { Height = 18, Background = Brushes.Transparent };
+        topology.Children.Add(deploymentGap);
 
         topology.Children.Add(circuitLayout);
 
