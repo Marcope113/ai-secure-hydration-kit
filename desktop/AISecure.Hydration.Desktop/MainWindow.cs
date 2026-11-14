@@ -1599,6 +1599,8 @@ public sealed class MainWindow : Window
             Update(3, "Extracting and registering Kali...");
             if (!_kaliConfigured) await InstallAttackerAsync(skipConfirmation: true);
             if (!_kaliConfigured) throw new InvalidOperationException("Kali VM registration incomplete.");
+            // Start the attacker automatically; its network profile is prepared on boot.
+            await OpenKaliVirtualBoxAsync();
             Update(4, "Downloading and verifying Debian...");
             if (!_debianVerified) await DownloadLabImageAsync("debian");
             if (!_debianVerified) throw new InvalidOperationException("Debian ISO verification incomplete.");
