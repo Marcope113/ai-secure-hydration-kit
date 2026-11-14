@@ -1390,6 +1390,11 @@ public sealed class MainWindow : Window
             _dhcpConfigured = true;
             if (_dhcpStateLabel is not null) { _dhcpStateLabel.Text = "● ENABLED"; _dhcpStateLabel.Foreground = Paint(Green); }
             if (_dhcpOuterTile is not null) _dhcpOuterTile.BorderBrush = Paint(Green);
+            if (_networkOuterTile is not null) _networkOuterTile.BorderBrush = Paint(Green);
+            if (_networkStatusLabel is not null) {
+                _networkStatusLabel.Text = _kaliIpVerified ? "● DHCP LEASE VERIFIED" : "● CONFIGURED · AWAITING VM";
+                _networkStatusLabel.Foreground = Paint(Green);
+            }
             _activity.Text = "Internal DHCP configured for aisecurelab (10.4.4.100–101). Guest IP lease not yet verified.";
         }
         catch (Exception ex)
