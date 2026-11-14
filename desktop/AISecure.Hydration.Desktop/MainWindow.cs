@@ -32,6 +32,8 @@ public sealed class MainWindow : Window
     private bool _kaliConfigured;
     private bool _deployingKali;
     private bool _deployingLab;
+    private bool _labDeployStarted;
+    private bool _labDeployAvailable;
     private Button? _deployLabButton;
     private TextBlock? _deployLabStatus;
     private readonly List<TextBlock> _labStepLabels = new();
@@ -955,10 +957,20 @@ public sealed class MainWindow : Window
             if (++_runtimePollTicks % 7 == 0) _ = RefreshKaliRuntimeAsync();
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
-            if (_deployingLab && _deployLabButton is not null)
+            if (_deployLabButton is not null)
             {
-                _deployLabButton.Background = Paint(circuitOverlay.Bright ? "#26785B" : "#194C3F");
-                _deployLabButton.BorderBrush = Paint(circuitOverlay.Bright ? "#8AF5C3" : Green);
+                if (!_labDeployAvailable) {
+                    _deployLabButton.Background = Paint("#293A49");
+                    _deployLabButton.BorderBrush = Paint("#5C7080");
+                }
+                else if (_labDeployStarted) {
+                    _deployLabButton.Background = Paint("#205846");
+                    _deployLabButton.BorderBrush = Paint(Green);
+                }
+                else {
+                    _deployLabButton.Background = Paint(circuitOverlay.Bright ? "#194B68" : "#112C43");
+                    _deployLabButton.BorderBrush = Paint(circuitOverlay.Bright ? "#78E6FF" : "#2184AA");
+                }
             }
             if (_openKaliStage is not null && _kaliConfigured && !_kaliRunning && !_kaliLaunchRequested)
             {
@@ -976,7 +988,7 @@ public sealed class MainWindow : Window
         _circuitTimer = circuitTimer;
         circuitTimer.Start();
         // A single visible deployment workflow; the per-VM progress indicators remain below.
-        var labWorkflow = Stack(3);
+        var labWorkflow = Stack(1);
         labWorkflow.HorizontalAlignment = HorizontalAlignment.Stretch;
         var labTitle = Txt("ONE-CLICK LAB DEPLOYMENT", 14, Accent, FontWeight.Bold);
         labTitle.HorizontalAlignment = HorizontalAlignment.Center;
@@ -985,8 +997,8 @@ public sealed class MainWindow : Window
         // All milestones and the deploy action share the same grid row and centerline.
         var steps = new Grid {
             ColumnDefinitions = new ColumnDefinitions("112,*,*,*,*,*,*,*"),
-            RowDefinitions = new RowDefinitions("36,Auto"),
-            ColumnSpacing = 0, RowSpacing = 4
+            RowDefinitions = new RowDefinitions("32,Auto"),
+            ColumnSpacing = 0, RowSpacing = 2
         };
         _labStepLabels.Clear();
         _labStepCircles.Clear();
@@ -1001,7 +1013,12 @@ public sealed class MainWindow : Window
         _deployLabButton.VerticalAlignment = VerticalAlignment.Center;
         _deployLabButton.HorizontalContentAlignment = HorizontalAlignment.Center;
         _deployLabButton.VerticalContentAlignment = VerticalAlignment.Center;
-        _deployLabButton.IsEnabled = hypervisorReady && !_deployingLab;
+        _labDeployAvailable = hypervisorReady;
+        _deployLabButton.IsEnabled = _labDeployAvailable && !_deployingLab;
+        if (_labDeployStarted) {
+            _deployLabButton.Background = Paint("#205846");
+            _deployLabButton.BorderBrush = Paint(Green);
+        }
         steps.Children.Add(_deployLabButton);
         var deployLabel = Txt("Deploy Lab", 12, Accent, FontWeight.Bold);
         deployLabel.TextAlignment = TextAlignment.Center;
@@ -1047,7 +1064,9 @@ public sealed class MainWindow : Window
         _deployLabStatus.HorizontalAlignment = HorizontalAlignment.Center;
         labWorkflow.Children.Add(_deployLabStatus);
         var workflowTile = Tile(labWorkflow, "#152B3C");
-        workflowTile.Padding = new Thickness(6, 10);
+        workflowTile.Padding = new Thickness(4, 8);
+        workflowTile.BorderBrush = Paint("#45C8E8");
+        workflowTile.BorderThickness = new Thickness(1.5);
         topology.Children.Add(workflowTile);
 
         topology.Children.Add(circuitLayout);
@@ -1626,6 +1645,7 @@ public sealed class MainWindow : Window
     {
         if (_deployingLab) return;
         _deployingLab = true;
+        _labDeployStarted = true;
         if (_deployLabButton is not null) { _deployLabButton.IsEnabled = false; _deployLabButton.BorderBrush = Paint(Green); _deployLabButton.Background = Paint("#205846"); }
         void Update(int index, string message)
         {
@@ -1696,8 +1716,8 @@ public sealed class MainWindow : Window
             _deployingLab = false;
             if (_deployLabButton is not null) {
                 _deployLabButton.IsEnabled = true;
-                _deployLabButton.Background = Paint("#142B42");
-                _deployLabButton.BorderBrush = Paint(Accent);
+                _deployLabButton.Background = Paint("#205846");
+                _deployLabButton.BorderBrush = Paint(Green);
             }
         }
     }
