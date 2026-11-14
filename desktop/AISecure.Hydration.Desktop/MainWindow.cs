@@ -31,6 +31,10 @@ public sealed class MainWindow : Window
     private bool _installingAttacker;
     private bool _kaliConfigured;
     private bool _deployingKali;
+    private bool _deployingLab;
+    private Button? _deployLabButton;
+    private TextBlock? _deployLabStatus;
+    private readonly List<TextBlock> _labStepLabels = new();
     private Button? _deployKaliButton;
     private bool _kaliRunning;
     private bool _kaliLaunchRequested;
@@ -682,7 +686,7 @@ public sealed class MainWindow : Window
         _kaliDownloadButton = null;
         _extractedKaliButton = null;
         _installAttackerButton = null;
-        attackerControls.Children.Add(deployLayout);
+        // Deployment is orchestrated by the single lab-wide action below.
         var attackerBody = Stack(3);
         var attackerHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         var attackerRole = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
@@ -796,7 +800,7 @@ public sealed class MainWindow : Window
         network.Children.Add(networkColumn);
         var targetActions = Stack(2);
         targetActions.Margin = new Thickness(0, 10, 0, 0);
-        targetActions.Children.Add(TargetControls(hypervisorReady));
+        // Debian provisioning is initiated by the lab-wide action below.
         var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE", Yellow,
             "IP ADDRESS   10.4.4.101\nOS VERSION   Debian 13\nUSER:PASS   debian:debian",
@@ -963,6 +967,38 @@ public sealed class MainWindow : Window
         _circuitTimer = circuitTimer;
         circuitTimer.Start();
         topology.Children.Add(circuitLayout);
+
+        // A single visible deployment workflow; the per-VM progress indicators remain below.
+        var labWorkflow = Stack(9);
+        labWorkflow.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var labTitle = Txt("ONE-CLICK LAB DEPLOYMENT", 14, Accent, FontWeight.Bold);
+        labTitle.HorizontalAlignment = HorizontalAlignment.Center;
+        labWorkflow.Children.Add(labTitle);
+        var steps = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*,*"), ColumnSpacing = 7 };
+        _labStepLabels.Clear();
+        var stepNames = new[] { "DHCP", "Internal Network", "Kali Download", "Kali Expand", "Debian Download", "Debian Install", "Ready" };
+        for (var stepIndex = 0; stepIndex < stepNames.Length; stepIndex++)
+        {
+            var stage = Txt("○  " + stepNames[stepIndex], 12, Muted, FontWeight.SemiBold);
+            stage.TextAlignment = TextAlignment.Center;
+            Grid.SetColumn(stage, stepIndex);
+            steps.Children.Add(stage);
+            _labStepLabels.Add(stage);
+        }
+        labWorkflow.Children.Add(steps);
+        var labActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14,
+            HorizontalAlignment = HorizontalAlignment.Center };
+        _deployLabButton = Button(_deployingLab ? "Deploying Lab..." : "Deploy Lab", () => _ = DeployEntireLabAsync());
+        _deployLabButton.IsEnabled = hypervisorReady && !_deployingLab;
+        _deployLabButton.Padding = new Thickness(28, 11);
+        labActions.Children.Add(_deployLabButton);
+        _deployLabStatus = Txt(_deployingLab ? "Deployment in progress..." : "Configure network and deploy both VMs in sequence.", 12, Muted);
+        _deployLabStatus.VerticalAlignment = VerticalAlignment.Center;
+        labActions.Children.Add(_deployLabStatus);
+        labWorkflow.Children.Add(labActions);
+        var workflowTile = Tile(labWorkflow, "#152B3C");
+        workflowTile.Padding = new Thickness(13);
+        topology.Children.Add(workflowTile);
         var architecturePanel = new Border {
             Background = Paint("#0D1E2D"), CornerRadius = new CornerRadius(18),
             BorderBrush = Paint("#35566B"), BorderThickness = new Thickness(1),
@@ -1531,6 +1567,51 @@ public sealed class MainWindow : Window
             }
         }
         catch (Exception ex) { _attackerProgressText.Text = "Cannot open Kali: " + ex.Message; }
+    }
+
+    private async Task DeployEntireLabAsync()
+    {
+        if (_deployingLab) return;
+        _deployingLab = true;
+        if (_deployLabButton is not null) _deployLabButton.IsEnabled = false;
+        void Update(int index, string message)
+        {
+            if (_deployLabStatus is not null) _deployLabStatus.Text = message;
+            for (var i = 0; i < _labStepLabels.Count; i++)
+            {
+                _labStepLabels[i].Text = (i < index ? "✓  " : i == index ? "●  " : "○  ") +
+                    new[] { "DHCP", "Internal Network", "Kali Download", "Kali Expand", "Debian Download", "Debian Install", "Ready" }[i];
+                _labStepLabels[i].Foreground = Paint(i < index ? Green : i == index ? Accent : Muted);
+            }
+        }
+        try
+        {
+            Update(0, "Configuring VirtualBox DHCP...");
+            await ConfigureDhcpAsync();
+            if (!_dhcpConfigured) throw new InvalidOperationException("DHCP configuration was not confirmed.");
+            Update(1, "Internal network is managed by VirtualBox during Kali registration.");
+            Update(2, "Downloading and verifying Kali...");
+            if (!_kaliVerified || _verifiedKaliPath is null || !File.Exists(_verifiedKaliPath))
+                await DownloadLabImageAsync("kali");
+            if (!_kaliVerified) throw new InvalidOperationException("Kali image verification incomplete.");
+            Update(3, "Extracting and registering Kali...");
+            if (!_kaliConfigured) await InstallAttackerAsync(skipConfirmation: true);
+            if (!_kaliConfigured) throw new InvalidOperationException("Kali VM registration incomplete.");
+            Update(4, "Downloading and verifying Debian...");
+            if (!_debianVerified) await DownloadLabImageAsync("debian");
+            if (!_debianVerified) throw new InvalidOperationException("Debian ISO verification incomplete.");
+            Update(5, "Debian unattended installation is not implemented yet.");
+            // Do not mark the lab ready until the Debian guest is genuinely provisioned.
+        }
+        catch (Exception ex)
+        {
+            if (_deployLabStatus is not null) _deployLabStatus.Text = "Stopped: " + ex.Message;
+        }
+        finally
+        {
+            _deployingLab = false;
+            if (_deployLabButton is not null) _deployLabButton.IsEnabled = true;
+        }
     }
 
     private async Task DeployKaliAsync()
