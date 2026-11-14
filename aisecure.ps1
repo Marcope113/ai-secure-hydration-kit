@@ -7,7 +7,9 @@ No guest OS installation or intentionally vulnerable settings in this release.
 [CmdletBinding()]
 param(
  [ValidateSet('Check','Install','CreateVM','PrepareMedia','SelectAttacker','ConfigureGuestIntegration','Status','Version')]
- [string]$Action='Check'
+ [string]$Action='Check',
+ [string]$KaliVM='',
+ [string]$DebianVM=''
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
@@ -165,27 +167,31 @@ try{
    Write-Host '  No ISO downloaded or VM created. Download and installation are not implemented yet.' -ForegroundColor Yellow
   }
   'ConfigureGuestIntegration' {
-   Step 1 3 'Checking VirtualBox and lab VM'
+   Step 1 3 'Finding selected VirtualBox guests'
    if(-not (Test-Path -LiteralPath $VBox)){throw 'VirtualBox not found.'}
    $s=Read-Json $VMManifest
-   if(-not $s -or -not $s.vmCreatedByKit){throw 'No Hydration-owned Debian VM recorded.'}
-   $names=@($s.vmName)
    $attacker=Read-Json $AttackerManifest
-   if($attacker -and $attacker.PSObject.Properties.Name -contains 'vmName' -and $attacker.vmName){
-    $names+= [string]$attacker.vmName
+   $debianName=if($DebianVM){$DebianVM}elseif($s -and $s.vmCreatedByKit){[string]$s.vmName}else{''}
+   $kaliName=if($KaliVM){$KaliVM}elseif($attacker -and $attacker.PSObject.Properties.Name -contains 'vmName' -and $attacker.vmName){[string]$attacker.vmName}else{''}
+   if(-not $debianName -and -not $kaliName){throw 'Specify -KaliVM and/or -DebianVM, or create kit-owned VMs.'}
+   if($debianName -and $kaliName -and $debianName -eq $kaliName){throw 'Kali and Debian VM names must differ.'}
+   $targets=@()
+   if($kaliName){$targets+=@{Name=$kaliName;Role='Kali';Clipboard='bidirectional'}}
+   if($debianName){$targets+=@{Name=$debianName;Role='Debian';Clipboard='disabled'}}
+   foreach($target in $targets){
+    $info=& $VBox showvminfo $target.Name --machinereadable 2>$null
+    if($LASTEXITCODE -ne 0){throw "VM not found: $($target.Name)"}
+    if(($info -join "`n") -notmatch 'VMState="poweroff"'){throw "Power off $($target.Name) before changing settings."}
    }
-   Step 2 3 'Enabling bidirectional clipboard on owned VMs'
-   foreach($name in $names){
-    $info=& $VBox showvminfo $name --machinereadable 2>$null
-    if($LASTEXITCODE -ne 0){throw "VM not found: $name"}
-    if(($info -join "`n") -notmatch 'VMState="poweroff"'){throw "Power off $name before changing settings."}
-    Run-VBox -ArgsList @('modifyvm',$name,'--clipboard-mode','bidirectional')
-    Show-Line $name 'CLIPBOARD BIDIRECTIONAL'
+   Step 2 3 'Applying clipboard settings'
+   foreach($target in $targets){
+    Run-VBox -ArgsList @('modifyvm',$target.Name,'--clipboard-mode',$target.Clipboard)
+    Show-Line $target.Role ("$($target.Name) : $($target.Clipboard)")
    }
-   Step 3 3 'Explaining guest-side requirement'
-   Write-Host '  Host clipboard settings applied.' -ForegroundColor Green
-   Write-Host '  Guest packages must be baked into each Kali/Debian golden image using scripts/install-guest-integration.sh.' -ForegroundColor Yellow
-   Write-Host '  This action does NOT install packages inside a running guest or verify VBoxClient.' -ForegroundColor Yellow
+   Step 3 3 'Guest-side integration requirements'
+   Write-Host '  Kali desktop: install virtualbox-guest-utils and virtualbox-guest-x11 in golden image.' -ForegroundColor Yellow
+   Write-Host '  Debian headless: install virtualbox-guest-utils; use SSH from Kali for copy/paste.' -ForegroundColor Yellow
+   Write-Host '  See scripts/install-guest-integration.sh. Guest packages were NOT installed by this host action.' -ForegroundColor Yellow
   }
   'Status' {
    Step 1 3 'Reading host installation state'
@@ -231,7 +237,7 @@ try{
     Run-VBox -ArgsList @('createvm','--name',$VMName,'--ostype','Debian_64','--basefolder',$folder,'--register')
     $s.vmCreatedByKit=$true;$s.stage='registered';Save-Json $VMManifest $s
     Step 3 5 'Configuring isolated networking and hardware'
-    Run-VBox -ArgsList @('modifyvm',$VMName,'--memory','4096','--cpus','2','--nic1','intnet','--intnet1','aisecurelab','--cableconnected1','on','--clipboard-mode','bidirectional','--audio-enabled','off')
+    Run-VBox -ArgsList @('modifyvm',$VMName,'--memory','4096','--cpus','2','--nic1','intnet','--intnet1','aisecurelab','--cableconnected1','on','--clipboard-mode','disabled','--audio-enabled','off')
     Step 4 5 'Creating virtual disk'
     Run-VBox -ArgsList @('storagectl',$VMName,'--name','SATA','--add','sata','--controller','IntelAhci')
     Run-VBox -ArgsList @('createmedium','disk','--filename',$disk,'--size','30720','--format','VDI')
