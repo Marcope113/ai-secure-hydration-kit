@@ -1,0 +1,28 @@
+name: Desktop Windows build
+
+on:
+  push:
+    branches: [main, feature/avalonia-windows-preview]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-windows.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-windows.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore desktop/AISecure.Hydration.Desktop/AISecure.Hydration.Desktop.csproj
+      - name: Build
+        run: dotnet build desktop/AISecure.Hydration.Desktop/AISecure.Hydration.Desktop.csproj --configuration Release --no-restore --warnaserror
