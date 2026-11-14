@@ -504,6 +504,7 @@ public sealed class MainWindow : Window
         _pulseSegments.Clear();
         _pulseBright = false;
         Dispatcher.UIThread.Post(() => _ = DetectRegisteredKaliAsync());
+        Dispatcher.UIThread.Post(() => _ = RefreshDebianInstallationAsync());
         // Progress is model state; controls belong to one page instance only.
         // Never reparent an existing TextBlock or ProgressBar during Refresh.
         _attackerProgressText = Txt(_kaliStatus, 11, Muted);
@@ -1660,6 +1661,24 @@ public sealed class MainWindow : Window
         catch (Exception ex) { _attackerProgressText.Text = "Cannot open Kali: " + ex.Message; }
     }
 
+    private async Task RefreshDebianInstallationAsync()
+    {
+        try
+        {
+            var uuid = await DebianLabProvisioner.FindVmAsync();
+            _debianVmUuid = string.IsNullOrEmpty(uuid) ? null : uuid;
+            _debianInstallationConfirmed = _debianVmUuid is not null &&
+                await DebianLabProvisioner.IsInstalledGuestRunningAsync(_debianVmUuid);
+            if (_openDebianVmButton is not null)
+                _openDebianVmButton.IsEnabled = _debianInstallationConfirmed;
+        }
+        catch
+        {
+            _debianInstallationConfirmed = false;
+            if (_openDebianVmButton is not null) _openDebianVmButton.IsEnabled = false;
+        }
+    }
+
     private async Task OpenDebianVirtualBoxAsync()
     {
         if (!_debianInstallationConfirmed || string.IsNullOrEmpty(_debianVmUuid)) return;
@@ -1737,6 +1756,7 @@ public sealed class MainWindow : Window
                 if (_deployLabStatus is not null)
                     _deployLabStatus.Text = "Debian installation / DHCP: waiting (" + (attempt + 1) * 10 + "s)";
             }
+            await RefreshDebianInstallationAsync();
             if (assignedIp is null)
                 throw new TimeoutException("Debian has not acquired a DHCP lease. Check the VM installer console; lab is not yet verified.");
             if (_deployLabStatus is not null)
