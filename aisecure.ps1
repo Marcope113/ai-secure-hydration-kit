@@ -6,7 +6,7 @@ No guest OS installation or intentionally vulnerable settings in this release.
 #>
 [CmdletBinding()]
 param(
- [ValidateSet('Check','Install','CreateVM','PrepareMedia','SelectAttacker','Status','Version')]
+ [ValidateSet('Check','Install','CreateVM','PrepareMedia','SelectAttacker','ConfigureGuestIntegration','Status','Version')]
  [string]$Action='Check'
 )
 Set-StrictMode -Version Latest
@@ -164,6 +164,29 @@ try{
    Write-Host "  Attacker selected: $distro" -ForegroundColor Green
    Write-Host '  No ISO downloaded or VM created. Download and installation are not implemented yet.' -ForegroundColor Yellow
   }
+  'ConfigureGuestIntegration' {
+   Step 1 3 'Checking VirtualBox and lab VM'
+   if(-not (Test-Path -LiteralPath $VBox)){throw 'VirtualBox not found.'}
+   $s=Read-Json $VMManifest
+   if(-not $s -or -not $s.vmCreatedByKit){throw 'No Hydration-owned Debian VM recorded.'}
+   $names=@($s.vmName)
+   $attacker=Read-Json $AttackerManifest
+   if($attacker -and $attacker.PSObject.Properties.Name -contains 'vmName' -and $attacker.vmName){
+    $names+= [string]$attacker.vmName
+   }
+   Step 2 3 'Enabling bidirectional clipboard on owned VMs'
+   foreach($name in $names){
+    $info=& $VBox showvminfo $name --machinereadable 2>$null
+    if($LASTEXITCODE -ne 0){throw "VM not found: $name"}
+    if(($info -join "`n") -notmatch 'VMState="poweroff"'){throw "Power off $name before changing settings."}
+    Run-VBox -ArgsList @('modifyvm',$name,'--clipboard-mode','bidirectional')
+    Show-Line $name 'CLIPBOARD BIDIRECTIONAL'
+   }
+   Step 3 3 'Explaining guest-side requirement'
+   Write-Host '  Host clipboard settings applied.' -ForegroundColor Green
+   Write-Host '  Guest packages must be baked into each Kali/Debian golden image using scripts/install-guest-integration.sh.' -ForegroundColor Yellow
+   Write-Host '  This action does NOT install packages inside a running guest or verify VBoxClient.' -ForegroundColor Yellow
+  }
   'Status' {
    Step 1 3 'Reading host installation state'
    if(Test-Path $Manifest){Get-Content $Manifest -Raw}else{Write-Host 'No host state.'}
@@ -208,7 +231,7 @@ try{
     Run-VBox -ArgsList @('createvm','--name',$VMName,'--ostype','Debian_64','--basefolder',$folder,'--register')
     $s.vmCreatedByKit=$true;$s.stage='registered';Save-Json $VMManifest $s
     Step 3 5 'Configuring isolated networking and hardware'
-    Run-VBox -ArgsList @('modifyvm',$VMName,'--memory','4096','--cpus','2','--nic1','intnet','--intnet1','aisecurelab','--cableconnected1','on','--audio-enabled','off')
+    Run-VBox -ArgsList @('modifyvm',$VMName,'--memory','4096','--cpus','2','--nic1','intnet','--intnet1','aisecurelab','--cableconnected1','on','--clipboard-mode','bidirectional','--audio-enabled','off')
     Step 4 5 'Creating virtual disk'
     Run-VBox -ArgsList @('storagectl',$VMName,'--name','SATA','--add','sata','--controller','IntelAhci')
     Run-VBox -ArgsList @('createmedium','disk','--filename',$disk,'--size','30720','--format','VDI')
