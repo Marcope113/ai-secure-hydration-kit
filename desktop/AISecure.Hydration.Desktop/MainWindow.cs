@@ -773,14 +773,15 @@ public sealed class MainWindow : Window
         link.Children.Add(networkArrow);
         link.Children.Add(networkName);
         link.Children.Add(networkType);
-        var networkState = Txt(_kaliIpVerified && _dhcpConfigured ? "● DHCP LEASE VERIFIED" : "● OFFLINE", 11,
-            _kaliIpVerified && _dhcpConfigured ? Green : Yellow, FontWeight.Bold);
+        var networkState = Txt(_kaliIpVerified && _dhcpConfigured ? "● DHCP LEASE VERIFIED" :
+            _dhcpConfigured ? "● CONFIGURED · AWAITING VM" : "● OFFLINE", 11,
+            _dhcpConfigured ? Green : Yellow, FontWeight.Bold);
         _networkStatusLabel = networkState;
         networkState.TextAlignment = TextAlignment.Center;
         link.Children.Add(networkState);
         var linkTile = new Border {
             Background = Paint("#24394D"), CornerRadius = new CornerRadius(10),
-            BorderBrush = Paint(_kaliIpVerified && _dhcpConfigured ? Green : Yellow), BorderThickness = new Thickness(2),
+            BorderBrush = Paint(_dhcpConfigured ? Green : Yellow), BorderThickness = new Thickness(2),
             Padding = new Thickness(9, 9), VerticalAlignment = VerticalAlignment.Center,
             Child = link
         };
