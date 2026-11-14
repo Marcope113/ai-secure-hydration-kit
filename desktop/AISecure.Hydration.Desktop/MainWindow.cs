@@ -1083,7 +1083,8 @@ public sealed class MainWindow : Window
         if (!hypervisorReady)
         {
             var prerequisite = Txt("Requires VirtualBox to be installed first", 11, Yellow, FontWeight.SemiBold);
-            prerequisite.HorizontalAlignment = HorizontalAlignment.Center;
+            prerequisite.HorizontalAlignment = HorizontalAlignment.Left;
+            prerequisite.Margin = new Thickness(8, 0, 0, 0);
             labWorkflow.Children.Add(prerequisite);
         }
         var workflowTile = Tile(labWorkflow, "#152B3C");
