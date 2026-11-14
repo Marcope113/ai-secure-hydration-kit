@@ -86,7 +86,6 @@ internal static class DebianLabProvisioner
                 "--hostname=debian.aisecurelab.test",
                 "--locale=en_US", "--country=US",
                 "--time-zone=Australia/Sydney",
-                "--install-additions=false",
                 "--start-vm=gui");
         }
         else
