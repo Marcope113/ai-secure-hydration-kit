@@ -970,18 +970,17 @@ public sealed class MainWindow : Window
         };
         _circuitTimer = circuitTimer;
         circuitTimer.Start();
-        topology.Children.Add(circuitLayout);
-
         // A single visible deployment workflow; the per-VM progress indicators remain below.
-        var labWorkflow = Stack(9);
+        var labWorkflow = Stack(3);
         labWorkflow.HorizontalAlignment = HorizontalAlignment.Stretch;
         var labTitle = Txt("ONE-CLICK LAB DEPLOYMENT", 14, Accent, FontWeight.Bold);
         labTitle.HorizontalAlignment = HorizontalAlignment.Center;
+        labTitle.FontSize = 12;
         labWorkflow.Children.Add(labTitle);
         // All milestones and the deploy action share the same grid row and centerline.
         var steps = new Grid {
             ColumnDefinitions = new ColumnDefinitions("112,*,*,*,*,*,*,*"),
-            RowDefinitions = new RowDefinitions("42,Auto"),
+            RowDefinitions = new RowDefinitions("36,Auto"),
             ColumnSpacing = 0, RowSpacing = 4
         };
         _labStepLabels.Clear();
@@ -989,8 +988,8 @@ public sealed class MainWindow : Window
         _labStepMarks.Clear();
         _deployLabButton = Button("", () => _ = DeployEntireLabAsync());
         _deployLabButton.Content = DeployChevron();
-        _deployLabButton.Width = 36;
-        _deployLabButton.Height = 36;
+        _deployLabButton.Width = 32;
+        _deployLabButton.Height = 32;
         _deployLabButton.Padding = new Thickness(0);
         _deployLabButton.CornerRadius = new CornerRadius(19);
         _deployLabButton.HorizontalAlignment = HorizontalAlignment.Center;
@@ -1043,8 +1042,11 @@ public sealed class MainWindow : Window
         _deployLabStatus.HorizontalAlignment = HorizontalAlignment.Center;
         labWorkflow.Children.Add(_deployLabStatus);
         var workflowTile = Tile(labWorkflow, "#152B3C");
-        workflowTile.Padding = new Thickness(13);
+        workflowTile.Padding = new Thickness(6, 10);
         topology.Children.Add(workflowTile);
+
+        topology.Children.Add(circuitLayout);
+
         var architecturePanel = new Border {
             Background = Paint("#0D1E2D"), CornerRadius = new CornerRadius(18),
             BorderBrush = Paint("#35566B"), BorderThickness = new Thickness(1),
@@ -1619,7 +1621,7 @@ public sealed class MainWindow : Window
     {
         if (_deployingLab) return;
         _deployingLab = true;
-        if (_deployLabButton is not null) _deployLabButton.IsEnabled = false;
+        if (_deployLabButton is not null) { _deployLabButton.IsEnabled = false; _deployLabButton.BorderBrush = Paint(Green); _deployLabButton.Background = Paint("#205846"); }
         void Update(int index, string message)
         {
             if (_deployLabStatus is not null) _deployLabStatus.Text = message;
