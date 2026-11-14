@@ -35,6 +35,9 @@ public sealed class MainWindow : Window
     private bool _labDeployStarted;
     private bool _labDeployAvailable;
     private Button? _deployLabButton;
+    private Button? _openKaliVmButton;
+    private Button? _openDebianVmButton;
+    private bool _debianInstallationConfirmed;
     private TextBlock? _deployLabStatus;
     private readonly List<TextBlock> _labStepLabels = new();
     private readonly List<Border> _labStepCircles = new();
@@ -712,6 +715,10 @@ public sealed class MainWindow : Window
             13, _kaliRunning ? Green : Yellow, FontWeight.Bold);
         attackerBody.Children.Add(_kaliRuntimeLabel);
         attackerBody.Children.Add(VmDetails("IP ADDRESS   10.4.4.100\nOS VERSION   Kali Linux\nUSER:PASS   kali:kali"));
+        _openKaliVmButton = Button("Open Kali", () => _ = OpenKaliVirtualBoxAsync());
+        _openKaliVmButton.IsEnabled = _kaliConfigured;
+        _openKaliVmButton.HorizontalAlignment = HorizontalAlignment.Left;
+        attackerControls.Children.Add(_openKaliVmButton);
         attackerControls.Margin = new Thickness(0, 10, 0, 0);
         attackerBody.Children.Add(attackerControls);
         var attackerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("*,195"), ColumnSpacing = 6 };
@@ -807,6 +814,10 @@ public sealed class MainWindow : Window
         var targetActions = Stack(2);
         targetActions.Margin = new Thickness(0, 10, 0, 0);
         // Debian provisioning is initiated by the lab-wide action below.
+        _openDebianVmButton = Button("Open Debian", () => _ = OpenDebianVirtualBoxAsync());
+        _openDebianVmButton.IsEnabled = _debianInstallationConfirmed;
+        _openDebianVmButton.HorizontalAlignment = HorizontalAlignment.Left;
+        targetActions.Children.Add(_openDebianVmButton);
         var target = Machine("▣", "VICTIM / TARGET", "Debian 13",
             "● OFFLINE", Yellow,
             "IP ADDRESS   10.4.4.101\nOS VERSION   Debian 13\nUSER:PASS   debian:debian",
@@ -1649,6 +1660,23 @@ public sealed class MainWindow : Window
         catch (Exception ex) { _attackerProgressText.Text = "Cannot open Kali: " + ex.Message; }
     }
 
+    private async Task OpenDebianVirtualBoxAsync()
+    {
+        if (!_debianInstallationConfirmed || string.IsNullOrEmpty(_debianVmUuid)) return;
+        try
+        {
+            var info = await DebianLabProvisioner.RunAsync(TimeSpan.FromSeconds(20),
+                "showvminfo", _debianVmUuid, "--machinereadable");
+            if (info.Contains("VMState=\"running\"", StringComparison.OrdinalIgnoreCase)) return;
+            if (!info.Contains("VMState=\"poweroff\"", StringComparison.OrdinalIgnoreCase) &&
+                !info.Contains("VMState=\"aborted\"", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Debian VM is not ready to start.");
+            await DebianLabProvisioner.RunAsync(TimeSpan.FromSeconds(30),
+                "startvm", _debianVmUuid, "--type", "gui");
+        }
+        catch (Exception ex) { _targetProgressText.Text = "Cannot open Debian: " + ex.Message; }
+    }
+
     private async Task DeployEntireLabAsync()
     {
         if (_deployingLab) return;
@@ -1684,6 +1712,7 @@ public sealed class MainWindow : Window
             Update(3, "Extracting and registering Kali...");
             if (!_kaliConfigured) await InstallAttackerAsync(skipConfirmation: true);
             if (!_kaliConfigured) throw new InvalidOperationException("Kali VM registration incomplete.");
+            if (_openKaliVmButton is not null) _openKaliVmButton.IsEnabled = true;
             // Start the attacker automatically; its network profile is prepared on boot.
             await OpenKaliVirtualBoxAsync();
             Update(4, "Downloading and verifying Debian...");
@@ -1714,6 +1743,7 @@ public sealed class MainWindow : Window
                 _deployLabStatus.Text = "Debian DHCP lease " + assignedIp +
                     " detected. Confirm guest boot and connectivity before marking lab ready.";
             // DHCP lease alone cannot prove Debian installation completed or guests can communicate.
+            // The Open Debian control remains locked until the installer completion is verified.
         }
         catch (Exception ex)
         {
