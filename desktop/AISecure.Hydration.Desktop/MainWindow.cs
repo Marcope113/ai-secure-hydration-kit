@@ -2190,6 +2190,34 @@ public sealed class MainWindow : Window
                     actionButton.BorderBrush = Paint(Green);
                 }
             }
+            // Search compatible cached archives, including user-renamed copies.
+            // Only trust a cached image if its SHA-256 matches the official
+            // checksum for the selected release. Ignore zero-byte and .part files.
+            if (kali)
+            {
+                var stem = Path.GetFileNameWithoutExtension(filename);
+                var candidates = Directory.EnumerateFiles(_isoRoot, "*.7z", SearchOption.TopDirectoryOnly)
+                    .Where(p => {
+                        var n = Path.GetFileNameWithoutExtension(p);
+                        return n.Equals(stem, StringComparison.OrdinalIgnoreCase) ||
+                            n.StartsWith(stem + "-", StringComparison.OrdinalIgnoreCase) ||
+                            n.StartsWith(stem + "_", StringComparison.OrdinalIgnoreCase);
+                    })
+                    .OrderByDescending(p => new FileInfo(p).Length)
+                    .ToList();
+                foreach (var candidate in candidates)
+                {
+                    if (new FileInfo(candidate).Length == 0) continue;
+                    Status("Verifying cached Kali image: " + Path.GetFileName(candidate), 0);
+                    var cachedHash = await HashFile(candidate);
+                    if (!string.Equals(cachedHash, expected, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    _verifiedKaliPath = candidate;
+                    Verified(cachedHash);
+                    Status("Using cached Kali image: " + Path.GetFileName(candidate), 100);
+                    return;
+                }
+            }
             if (File.Exists(destination))
             {
                 Status("Verifying existing image...", 0);
