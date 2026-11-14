@@ -98,6 +98,21 @@ internal static class DebianLabProvisioner
         return uuid;
     }
 
+    // A registered VM or DHCP lease alone does not prove that Debian finished installing.
+    // Require a running guest reporting Debian through VirtualBox Guest Additions.
+    internal static async Task<bool> IsInstalledGuestRunningAsync(string uuid)
+    {
+        if (string.IsNullOrWhiteSpace(uuid)) return false;
+        var info = await RunAsync(TimeSpan.FromSeconds(20),
+            "showvminfo", uuid, "--machinereadable");
+        if (!info.Contains("VMState=\"running\"", StringComparison.OrdinalIgnoreCase))
+            return false;
+        var properties = await RunAsync(TimeSpan.FromSeconds(20),
+            "guestproperty", "enumerate", uuid);
+        return Regex.IsMatch(properties,
+            @"(?im)^Name:\s*/VirtualBox/GuestInfo/OS/Product,\s*value:\s*Debian(?:\s|,|$)");
+    }
+
     internal static async Task<string?> FindDhcpAddressAsync(string uuid)
     {
         var info = await RunAsync(TimeSpan.FromSeconds(20), "showvminfo", uuid, "--machinereadable");
