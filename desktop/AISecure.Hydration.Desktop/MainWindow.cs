@@ -50,6 +50,8 @@ public sealed class MainWindow : Window
     private Button? _extractedKaliButton;
     private bool _kaliVerified;
     private bool _debianVerified;
+    private string? _verifiedDebianIsoPath;
+    private string? _debianVmUuid;
     private Border? _dhcpOuterTile;
     private Border? _networkOuterTile;
     private TextBlock? _networkStatusLabel;
@@ -1600,8 +1602,31 @@ public sealed class MainWindow : Window
             Update(4, "Downloading and verifying Debian...");
             if (!_debianVerified) await DownloadLabImageAsync("debian");
             if (!_debianVerified) throw new InvalidOperationException("Debian ISO verification incomplete.");
-            Update(5, "Debian unattended installation is not implemented yet.");
-            // Do not mark the lab ready until the Debian guest is genuinely provisioned.
+            Update(5, "Installing Debian 13 from verified ISO (unattended)...");
+            var debianIso = _verifiedDebianIsoPath;
+            if (string.IsNullOrEmpty(debianIso) || !File.Exists(debianIso))
+                throw new InvalidOperationException("Debian ISO path is unavailable after verification.");
+            _debianVmUuid = await DebianLabProvisioner.EnsureInstalledAsync(
+                debianIso, 2048, 2, 20, message => Dispatcher.UIThread.Post(() => {
+                    if (_deployLabStatus is not null) _deployLabStatus.Text = message;
+                }));
+            Update(6, "Debian installer launched. Waiting for guest DHCP lease...");
+            string? assignedIp = null;
+            for (var attempt = 0; attempt < 72; attempt++)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                try { assignedIp = await DebianLabProvisioner.FindDhcpAddressAsync(_debianVmUuid); }
+                catch { /* Installer may still be booting. */ }
+                if (assignedIp is not null) break;
+                if (_deployLabStatus is not null)
+                    _deployLabStatus.Text = "Debian installation / DHCP: waiting (" + (attempt + 1) * 10 + "s)";
+            }
+            if (assignedIp is null)
+                throw new TimeoutException("Debian has not acquired a DHCP lease. Check the VM installer console; lab is not yet verified.");
+            if (_deployLabStatus is not null)
+                _deployLabStatus.Text = "Debian DHCP lease " + assignedIp +
+                    " detected. Confirm guest boot and connectivity before marking lab ready.";
+            // DHCP lease alone cannot prove Debian installation completed or guests can communicate.
         }
         catch (Exception ex)
         {
@@ -1999,7 +2024,7 @@ public sealed class MainWindow : Window
                 }
                 if (kali && _attackerCopyButton is not null) _attackerCopyButton.IsEnabled = true;
                 if (!kali && _targetCopyButton is not null) _targetCopyButton.IsEnabled = true;
-                if (!kali) { _debianVerified = true; _debianSha256 = actual;
+                if (!kali) { _debianVerified = true; _verifiedDebianIsoPath = destination; _debianSha256 = actual;
                     if (_debianHashLabel is not null) { _debianHashLabel.Text = "SHA-256: " + actual[..12] + "…"; ToolTip.SetTip(_debianHashLabel, actual); }
                 }
                 Status(kali ? "Kali image verified - ready to register VM" :
