@@ -996,7 +996,7 @@ public sealed class MainWindow : Window
         labWorkflow.Children.Add(labTitle);
         // All milestones and the deploy action share the same grid row and centerline.
         var steps = new Grid {
-            ColumnDefinitions = new ColumnDefinitions("112,*,*,*,*,*,*,*"),
+            ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*,*,*"),
             RowDefinitions = new RowDefinitions("32,Auto"),
             ColumnSpacing = 0, RowSpacing = 2
         };
