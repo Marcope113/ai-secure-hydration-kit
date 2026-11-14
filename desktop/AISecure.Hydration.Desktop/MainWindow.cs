@@ -1015,13 +1015,19 @@ public sealed class MainWindow : Window
         _deployLabButton.VerticalContentAlignment = VerticalAlignment.Center;
         _labDeployAvailable = hypervisorReady;
         _deployLabButton.IsEnabled = _labDeployAvailable && !_deployingLab;
-        if (_labDeployStarted) {
+        if (!_labDeployAvailable) {
+            _deployLabButton.Background = Paint("#293A49");
+            _deployLabButton.BorderBrush = Paint("#5C7080");
+            _deployLabButton.Opacity = 0.45;
+        }
+        else if (_labDeployStarted) {
             _deployLabButton.Background = Paint("#205846");
             _deployLabButton.BorderBrush = Paint(Green);
         }
         steps.Children.Add(_deployLabButton);
         var deployLabel = Txt("Deploy Lab", 12, Accent, FontWeight.Bold);
         deployLabel.TextAlignment = TextAlignment.Center;
+        if (!_labDeployAvailable) { deployLabel.Foreground = Paint("#6D8090"); deployLabel.Opacity = 0.55; }
         Grid.SetRow(deployLabel, 1);
         steps.Children.Add(deployLabel);
         var stepNames = new[] { "DHCP", "Internal Network", "Kali Download", "Kali Expand", "Debian Download", "Debian Install", "Ready" };
