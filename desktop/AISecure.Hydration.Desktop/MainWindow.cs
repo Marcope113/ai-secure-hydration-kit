@@ -955,6 +955,11 @@ public sealed class MainWindow : Window
             if (++_runtimePollTicks % 7 == 0) _ = RefreshKaliRuntimeAsync();
             circuitOverlay.Bright = !circuitOverlay.Bright;
             circuitOverlay.InvalidateVisual();
+            if (_deployingLab && _deployLabButton is not null)
+            {
+                _deployLabButton.Background = Paint(circuitOverlay.Bright ? "#26785B" : "#194C3F");
+                _deployLabButton.BorderBrush = Paint(circuitOverlay.Bright ? "#8AF5C3" : Green);
+            }
             if (_openKaliStage is not null && _kaliConfigured && !_kaliRunning && !_kaliLaunchRequested)
             {
                 _openKaliStage.BorderBrush = Paint(circuitOverlay.Bright ? "#79E7FF" : "#287A98");
@@ -1689,7 +1694,11 @@ public sealed class MainWindow : Window
         finally
         {
             _deployingLab = false;
-            if (_deployLabButton is not null) _deployLabButton.IsEnabled = true;
+            if (_deployLabButton is not null) {
+                _deployLabButton.IsEnabled = true;
+                _deployLabButton.Background = Paint("#142B42");
+                _deployLabButton.BorderBrush = Paint(Accent);
+            }
         }
     }
 
