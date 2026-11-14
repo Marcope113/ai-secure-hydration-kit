@@ -35,6 +35,8 @@ public sealed class MainWindow : Window
     private Button? _deployLabButton;
     private TextBlock? _deployLabStatus;
     private readonly List<TextBlock> _labStepLabels = new();
+    private readonly List<Border> _labStepCircles = new();
+    private readonly List<TextBlock> _labStepMarks = new();
     private Button? _deployKaliButton;
     private bool _kaliRunning;
     private bool _kaliLaunchRequested;
@@ -976,28 +978,70 @@ public sealed class MainWindow : Window
         var labTitle = Txt("ONE-CLICK LAB DEPLOYMENT", 14, Accent, FontWeight.Bold);
         labTitle.HorizontalAlignment = HorizontalAlignment.Center;
         labWorkflow.Children.Add(labTitle);
-        var steps = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*,*"), ColumnSpacing = 7 };
+        // All milestones and the deploy action share the same grid row and centerline.
+        var steps = new Grid {
+            ColumnDefinitions = new ColumnDefinitions("112,*,*,*,*,*,*,*"),
+            RowDefinitions = new RowDefinitions("42,Auto"),
+            ColumnSpacing = 0, RowSpacing = 4
+        };
         _labStepLabels.Clear();
+        _labStepCircles.Clear();
+        _labStepMarks.Clear();
+        _deployLabButton = Button("", () => _ = DeployEntireLabAsync());
+        _deployLabButton.Content = DeployChevron();
+        _deployLabButton.Width = 36;
+        _deployLabButton.Height = 36;
+        _deployLabButton.Padding = new Thickness(0);
+        _deployLabButton.CornerRadius = new CornerRadius(19);
+        _deployLabButton.HorizontalAlignment = HorizontalAlignment.Center;
+        _deployLabButton.VerticalAlignment = VerticalAlignment.Center;
+        _deployLabButton.HorizontalContentAlignment = HorizontalAlignment.Center;
+        _deployLabButton.VerticalContentAlignment = VerticalAlignment.Center;
+        _deployLabButton.IsEnabled = hypervisorReady && !_deployingLab;
+        steps.Children.Add(_deployLabButton);
+        var deployLabel = Txt("Deploy Lab", 12, Accent, FontWeight.Bold);
+        deployLabel.TextAlignment = TextAlignment.Center;
+        Grid.SetRow(deployLabel, 1);
+        steps.Children.Add(deployLabel);
         var stepNames = new[] { "DHCP", "Internal Network", "Kali Download", "Kali Expand", "Debian Download", "Debian Install", "Ready" };
+        Border? finalCircle = null;
         for (var stepIndex = 0; stepIndex < stepNames.Length; stepIndex++)
         {
-            var stage = Txt("○  " + stepNames[stepIndex], 12, Muted, FontWeight.SemiBold);
-            stage.TextAlignment = TextAlignment.Center;
-            Grid.SetColumn(stage, stepIndex);
-            steps.Children.Add(stage);
-            _labStepLabels.Add(stage);
+            var mark = Txt("", 16, "#102A25", FontWeight.Bold);
+            mark.HorizontalAlignment = HorizontalAlignment.Center;
+            mark.VerticalAlignment = VerticalAlignment.Center;
+            var circle = new Border {
+                Width = 30, Height = 30, CornerRadius = new CornerRadius(16),
+                BorderBrush = Paint("#668196"), BorderThickness = new Thickness(2),
+                Background = Paint("#263D50"), Child = mark,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(circle, stepIndex + 1);
+            steps.Children.Add(circle);
+            var label = Txt(stepNames[stepIndex], 11, Muted, FontWeight.SemiBold);
+            label.TextAlignment = TextAlignment.Center;
+            Grid.SetColumn(label, stepIndex + 1);
+            Grid.SetRow(label, 1);
+            steps.Children.Add(label);
+            _labStepCircles.Add(circle);
+            _labStepMarks.Add(mark);
+            _labStepLabels.Add(label);
+            finalCircle = circle;
         }
-        labWorkflow.Children.Add(steps);
-        var labActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14,
-            HorizontalAlignment = HorizontalAlignment.Center };
-        _deployLabButton = Button(_deployingLab ? "Deploying Lab..." : "Deploy Lab", () => _ = DeployEntireLabAsync());
-        _deployLabButton.IsEnabled = hypervisorReady && !_deployingLab;
-        _deployLabButton.Padding = new Thickness(28, 11);
-        labActions.Children.Add(_deployLabButton);
-        _deployLabStatus = Txt(_deployingLab ? "Deployment in progress..." : "Configure network and deploy both VMs in sequence.", 12, Muted);
-        _deployLabStatus.VerticalAlignment = VerticalAlignment.Center;
-        labActions.Children.Add(_deployLabStatus);
-        labWorkflow.Children.Add(labActions);
+        var track = new DeployConnector {
+            StartButton = _deployLabButton, FinalStage = finalCircle,
+            IsHitTestVisible = false
+        };
+        var trackLayout = new Grid();
+        trackLayout.Children.Add(track);
+        trackLayout.Children.Add(steps);
+        trackLayout.LayoutUpdated += (_, _) => track.InvalidateVisual();
+        labWorkflow.Children.Add(trackLayout);
+        _deployLabStatus = Txt(_deployingLab ? "Deployment in progress..." :
+            "Configure network and deploy both VMs in sequence.", 12, Muted);
+        _deployLabStatus.HorizontalAlignment = HorizontalAlignment.Center;
+        labWorkflow.Children.Add(_deployLabStatus);
         var workflowTile = Tile(labWorkflow, "#152B3C");
         workflowTile.Padding = new Thickness(13);
         topology.Children.Add(workflowTile);
@@ -1579,11 +1623,17 @@ public sealed class MainWindow : Window
         void Update(int index, string message)
         {
             if (_deployLabStatus is not null) _deployLabStatus.Text = message;
+            var names = new[] { "DHCP", "Internal Network", "Kali Download", "Kali Expand", "Debian Download", "Debian Install", "Ready" };
             for (var i = 0; i < _labStepLabels.Count; i++)
             {
-                _labStepLabels[i].Text = (i < index ? "✓  " : i == index ? "●  " : "○  ") +
-                    new[] { "DHCP", "Internal Network", "Kali Download", "Kali Expand", "Debian Download", "Debian Install", "Ready" }[i];
-                _labStepLabels[i].Foreground = Paint(i < index ? Green : i == index ? Accent : Muted);
+                var done = i < index;
+                var current = i == index;
+                _labStepLabels[i].Text = names[i];
+                _labStepLabels[i].Foreground = Paint(done ? Green : current ? Accent : Muted);
+                _labStepCircles[i].Background = Paint(done ? Green : current ? "#16465A" : "#263D50");
+                _labStepCircles[i].BorderBrush = Paint(done ? Green : current ? Accent : "#668196");
+                _labStepMarks[i].Text = done ? "✓" : current ? "•" : "";
+                _labStepMarks[i].Foreground = Paint(done ? "#102A25" : Accent);
             }
         }
         try
